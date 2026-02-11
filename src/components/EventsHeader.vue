@@ -38,11 +38,15 @@
       <div class="header-actions">
         <button 
           class="connect-wallet-btn" 
-          :class="{ 'connected': isConnected }"
+          :class="{ 'connected': isConnected, 'connecting': isConnecting }"
           @click="handleConnectWallet"
+          :disabled="isConnecting"
         >
-          <span v-if="!isConnected" class="btn-content">
-            Подключить кошелек
+          <span v-if="isConnecting" class="btn-content">
+            Подключение...
+          </span>
+          <span v-else-if="!isConnected" class="btn-content">
+            {{ isWalletInstalled ? 'Подключить кошелек' : 'Установить MetaMask' }}
           </span>
           <span v-else class="btn-content connected-content">
             <span class="wallet-address">{{ truncatedAddress }}</span>
@@ -55,28 +59,35 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { onMounted, computed } from 'vue'
 import { RouterLink } from 'vue-router'
+import { storeToRefs } from 'pinia'
+import { useWalletStore } from '@/stores/wallet'
 
-const isConnected = ref(false)
-const walletAddress = ref<string>('')
+const walletStore = useWalletStore()
 
-const truncatedAddress = computed(() => {
-  if (!walletAddress.value) return ''
-  return `${walletAddress.value.slice(0, 6)}...${walletAddress.value.slice(-4)}`
-})
+// Используем storeToRefs для реактивности
+const { isConnected, isConnecting, truncatedAddress, isWalletInstalled, error } = storeToRefs(walletStore)
 
-const handleConnectWallet = () => {
-  // TODO: Реализовать подключение кошелька для NFT
-  if (!isConnected.value) {
-    // Симуляция подключения
-    walletAddress.value = '0x1234567890abcdef1234567890abcdef12345678'
-    isConnected.value = true
-  } else {
-    isConnected.value = false
-    walletAddress.value = ''
+const handleConnectWallet = async () => {
+  try {
+    if (isConnected.value) {
+      await walletStore.disconnect()
+    } else {
+      await walletStore.connect()
+    }
+  } catch (err: any) {
+    console.error('Ошибка подключения кошелька:', err)
+    // Показываем ошибку пользователю
+    const errorMessage = error.value || err.message || 'Не удалось подключить кошелек'
+    alert(errorMessage)
   }
 }
+
+onMounted(() => {
+  // Инициализируем store при монтировании компонента
+  walletStore.init()
+})
 </script>
 
 <style scoped>
@@ -219,6 +230,15 @@ const handleConnectWallet = () => {
 .connect-wallet-btn.connected {
   background: rgba(255, 255, 255, 0.95);
   padding: 0.625rem 1.25rem;
+}
+
+.connect-wallet-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.connect-wallet-btn.connecting {
+  opacity: 0.8;
 }
 
 .btn-content {
