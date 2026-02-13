@@ -15,6 +15,5 @@ app.use(router)
 
 app.mount('#app')
 
-// Инициализируем wallet store для проверки существующего подключения
 const walletStore = useWalletStore()
 walletStore.init()

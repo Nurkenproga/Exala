@@ -25,7 +25,6 @@ export const useEventsStore = defineStore('events', () => {
   const error = ref<string | null>(null)
   const selectedEvent = ref<Event | null>(null)
 
-  // Вычисляемые свойства
   const upcomingEvents = computed(() => {
     const now = new Date()
     return events.value.filter(event => new Date(event.date) >= now)
@@ -46,17 +45,13 @@ export const useEventsStore = defineStore('events', () => {
     return events.value.filter(event => event.hasNFT)
   })
 
-  // Действия
   const fetchEvents = async () => {
     loading.value = true
     error.value = null
 
     try {
-      // TODO: Заменить на реальный API запрос
-      // Симуляция загрузки данных
       await new Promise(resolve => setTimeout(resolve, 500))
 
-      // Моковые данные для демонстрации
       events.value = [
         {
           id: '1',
@@ -181,7 +176,6 @@ export const useEventsStore = defineStore('events', () => {
       throw new Error('Места закончились')
     }
 
-    // TODO: Реализовать регистрацию через API
     if (event.attendees !== undefined) {
       event.attendees++
     }
@@ -193,21 +187,17 @@ export const useEventsStore = defineStore('events', () => {
       throw new Error('NFT недоступно для этого события')
     }
 
-    // TODO: Реализовать выдачу NFT через блокчейн
     console.log('Claiming NFT for event:', eventId)
   }
 
   return {
-    // State
     events,
     loading,
     error,
     selectedEvent,
-    // Computed
     upcomingEvents,
     eventsByCategory,
     eventsWithNFT,
-    // Actions
     fetchEvents,
     getEventById,
     selectEvent,

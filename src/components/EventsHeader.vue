@@ -65,8 +65,6 @@ import { storeToRefs } from 'pinia'
 import { useWalletStore } from '@/stores/wallet'
 
 const walletStore = useWalletStore()
-
-// Используем storeToRefs для реактивности
 const { isConnected, isConnecting, truncatedAddress, isWalletInstalled, error } = storeToRefs(walletStore)
 
 const handleConnectWallet = async () => {
@@ -78,14 +76,12 @@ const handleConnectWallet = async () => {
     }
   } catch (err: any) {
     console.error('Ошибка подключения кошелька:', err)
-    // Показываем ошибку пользователю
     const errorMessage = error.value || err.message || 'Не удалось подключить кошелек'
     alert(errorMessage)
   }
 }
 
 onMounted(() => {
-  // Инициализируем store при монтировании компонента
   walletStore.init()
 })
 </script>
