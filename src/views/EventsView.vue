@@ -134,7 +134,6 @@ const formatDate = (dateString: string) => {
 }
 
 const selectEvent = (event: Event) => {
-  // TODO: Переход на страницу деталей события
   console.log('Selected event:', event)
 }
 

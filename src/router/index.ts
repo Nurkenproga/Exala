@@ -16,8 +16,7 @@ const router = createRouter({
     {
       path: '/nft',
       name: 'nft',
-      // TODO: Создать NFTView компонент
-      component: () => import('../views/EventsView.vue'),
+      component: () => import('../views/NFTView.vue'),
     },
     {
       path: '/profile',

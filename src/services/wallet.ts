@@ -6,15 +6,9 @@ export interface WalletConnection {
   signer: any
 }
 
-/**
- * Сервис для работы с Web3 кошельками (MetaMask и др.)
- */
 class WalletService {
   private provider: BrowserProvider | null = null
 
-  /**
-   * Проверяет, установлен ли MetaMask или другой Web3 провайдер
-   */
   isWalletInstalled(): boolean {
     return typeof window !== 'undefined' && typeof window.ethereum !== 'undefined'
   }
@@ -34,9 +28,6 @@ class WalletService {
     return this.provider
   }
 
-  /**
-   * Подключается к кошельку пользователя
-   */
   async connect(): Promise<WalletConnection> {
     if (!this.isWalletInstalled()) {
       throw new Error('MetaMask или другой Web3 кошелек не установлен. Пожалуйста, установите MetaMask.')
@@ -47,7 +38,6 @@ class WalletService {
         throw new Error('MetaMask не установлен')
       }
 
-      // Запрашиваем доступ к аккаунтам
       await window.ethereum.request({ method: 'eth_requestAccounts' })
 
       const provider = await this.getProvider()
@@ -67,16 +57,10 @@ class WalletService {
     }
   }
 
-  /**
-   * Отключается от кошелька
-   */
   async disconnect(): Promise<void> {
     this.provider = null
   }
 
-  /**
-   * Получает текущий адрес кошелька (если уже подключен)
-   */
   async getCurrentAddress(): Promise<string | null> {
     if (!this.isWalletInstalled() || !window.ethereum) {
       return null
@@ -94,9 +78,6 @@ class WalletService {
     }
   }
 
-  /**
-   * Слушает изменения аккаунтов (когда пользователь переключает кошелек)
-   */
   onAccountsChanged(callback: (accounts: string[]) => void): () => void {
     if (!this.isWalletInstalled() || !window.ethereum) {
       return () => {}
@@ -109,7 +90,6 @@ class WalletService {
 
     ethereum.on('accountsChanged', handler)
 
-    // Возвращаем функцию для отписки
     return () => {
       if (window.ethereum) {
         window.ethereum.removeListener('accountsChanged', handler)
@@ -117,9 +97,6 @@ class WalletService {
     }
   }
 
-  /**
-   * Слушает изменения сети
-   */
   onChainChanged(callback: (chainId: string) => void): () => void {
     if (!this.isWalletInstalled() || !window.ethereum) {
       return () => {}
@@ -139,9 +116,6 @@ class WalletService {
     }
   }
 
-  /**
-   * Получает ID текущей сети
-   */
   async getChainId(): Promise<number> {
     if (!this.isWalletInstalled()) {
       throw new Error('Кошелек не установлен')
@@ -153,10 +127,8 @@ class WalletService {
   }
 }
 
-// Экспортируем singleton экземпляр
 export const walletService = new WalletService()
 
-// Расширяем Window интерфейс для TypeScript
 declare global {
   interface Window {
     ethereum?: {
