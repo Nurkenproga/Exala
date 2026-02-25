@@ -14,6 +14,26 @@ const router = createRouter({
       component: EventsView,
     },
     {
+      path: '/movies',
+      name: 'movies',
+      component: () => import('../views/MoviesView.vue'),
+    },
+    {
+      path: '/concerts',
+      name: 'concerts',
+      component: () => import('../views/ConcertsView.vue'),
+    },
+    {
+      path: '/theatre',
+      name: 'theatre',
+      component: () => import('../views/EventsView.vue'),
+    },
+    {
+      path: '/standups',
+      name: 'standups',
+      component: () => import('../views/EventsView.vue'),
+    },
+    {
       path: '/nft',
       name: 'nft',
       component: () => import('../views/NFTView.vue'),
@@ -21,7 +41,6 @@ const router = createRouter({
     {
       path: '/profile',
       name: 'profile',
-      // TODO: Создать ProfileView компонент
       component: () => import('../views/EventsView.vue'),
     },
   ],
