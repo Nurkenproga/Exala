@@ -33,6 +33,40 @@ export interface Concert {
   last_modified: string
 }
 
+export interface TheatreEvent {
+  id: number
+  play_id: number
+  partner_name: string
+  event_type_id: number
+  name: string
+  age_restriction: number
+  premiere_kaz: string | null
+  next_session_date: string
+  small_poster: string
+  event_url: string
+  price_from: number
+}
+
+export interface StandupEvent {
+  id: number
+  standup_id: number
+  event_type_id: number
+  title: string
+  url: string
+  image: string
+  image_mobile: string
+  type: string
+  address: string
+  city: string
+  category: string
+  description: string
+  content: string
+  price: number | null
+  event_dates: string
+  card_info: string
+  card_ticket_url: string
+}
+
 class ApiService {
   private baseUrl: string = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
   private useProxy: boolean = import.meta.env.DEV
@@ -95,12 +129,12 @@ class ApiService {
     return this.request<Concert[]>('/concerts/')
   }
 
-  async getTheatre(): Promise<any[]> {
-    return this.request<any[]>('/theatre')
+  async getTheatre(): Promise<TheatreEvent[]> {
+    return this.request<TheatreEvent[]>('/theatre/')
   }
 
-  async getStandups(): Promise<any[]> {
-    return this.request<any[]>('/standups')
+  async getStandups(): Promise<StandupEvent[]> {
+    return this.request<StandupEvent[]>('/standups/')
   }
 }
 

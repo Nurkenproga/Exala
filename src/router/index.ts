@@ -26,12 +26,12 @@ const router = createRouter({
     {
       path: '/theatre',
       name: 'theatre',
-      component: () => import('../views/EventsView.vue'),
+      component: () => import('../views/TheatreView.vue'),
     },
     {
       path: '/standups',
       name: 'standups',
-      component: () => import('../views/EventsView.vue'),
+      component: () => import('../views/StandupsView.vue'),
     },
     {
       path: '/nft',
