@@ -20,6 +20,34 @@
           События
         </RouterLink>
         <RouterLink 
+          to="/movies" 
+          class="nav-link" 
+          active-class="active"
+        >
+          Movies
+        </RouterLink>
+        <RouterLink 
+          to="/concerts" 
+          class="nav-link" 
+          active-class="active"
+        >
+          Concerts
+        </RouterLink>
+        <RouterLink 
+          to="/theatre" 
+          class="nav-link" 
+          active-class="active"
+        >
+          Theatre
+        </RouterLink>
+        <RouterLink 
+          to="/standups" 
+          class="nav-link" 
+          active-class="active"
+        >
+          Standups
+        </RouterLink>
+        <RouterLink 
           to="/nft" 
           class="nav-link" 
           active-class="active"
@@ -153,6 +181,7 @@ onMounted(() => {
   flex: 1;
   justify-content: center;
   align-items: center;
+  flex-wrap: wrap;
 }
 
 .nav-link {
@@ -271,9 +300,13 @@ onMounted(() => {
     gap: 1.5rem;
   }
 
+  .main-nav {
+    gap: 0.25rem;
+  }
+
   .nav-link {
-    padding: 0.625rem;
-    justify-content: center;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.85rem;
   }
 }
 
