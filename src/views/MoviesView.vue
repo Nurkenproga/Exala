@@ -60,6 +60,7 @@
                 loading="lazy"
                 @error="handleImageError"
               />
+              <div class="age-badge" :class="getAgeClass(movie.age_restriction)">{{ movie.age_restriction }}+</div>
               <div v-if="movie.is_pre_sales" class="pre-sales-badge">
                 Предпродажа
               </div>
@@ -70,14 +71,14 @@
             </div>
             <div class="movie-info">
               <h3 class="movie-title">{{ movie.title }}</h3>
-              <p v-if="movie.title_original !== movie.title" class="movie-title-original">
-                {{ movie.title_original }}
+              <p class="movie-title-original">
+                <template v-if="movie.title_original !== movie.title">{{ movie.title_original }}</template>
+                <template v-else>&nbsp;</template>
               </p>
               <div class="movie-meta">
                 <span class="movie-genres">{{ movie.genres }}</span>
                 <div class="movie-meta-row">
                   <span v-if="movie.duration > 0" class="movie-duration">{{ movie.duration }} мин</span>
-                  <span class="movie-age">{{ movie.age_restriction }}+</span>
                 </div>
               </div>
               <div class="movie-premiere">
@@ -136,6 +137,12 @@ const getRatingClass = (rating: number): string => {
   if (rating >= 5) return 'rating-good'
   if (rating >= 3) return 'rating-average'
   return 'rating-poor'
+}
+
+const getAgeClass = (age: number): string => {
+  if (age <= 6) return 'age-family'
+  if (age <= 16) return 'age-teen'
+  return 'age-adult'
 }
 
 const handleImageError = (event: Event) => {
@@ -312,17 +319,43 @@ onMounted(() => {
   image-rendering: -webkit-optimize-contrast;
 }
 
-.pre-sales-badge {
+.age-badge {
   position: absolute;
   top: 0.5rem;
   left: 0.5rem;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
-  padding: 0.25rem 0.5rem;
-  border-radius: 6px;
-  font-size: 0.75rem;
+  padding: 0.3rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+}
+
+.age-badge.age-family {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+}
+
+.age-badge.age-teen {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+}
+
+.age-badge.age-adult {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+}
+
+.pre-sales-badge {
+  position: absolute;
+  bottom: 0.5rem;
+  right: 0.5rem;
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  padding: 0.2rem 0.45rem;
+  border-radius: 4px;
+  font-size: 0.65rem;
   font-weight: 600;
-  box-shadow: 0 2px 6px rgba(102, 126, 234, 0.3);
+  letter-spacing: 0.02em;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(4px);
 }
 
 .rating-badge {
@@ -390,6 +423,7 @@ onMounted(() => {
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  min-height: 2.6em;
 }
 
 .movie-title-original {
@@ -397,7 +431,8 @@ onMounted(() => {
   color: #718096;
   margin: 0 0 0.5rem 0;
   font-style: italic;
-  min-height: 1.2rem;
+  min-height: 1.25rem;
+  line-height: 1.25;
 }
 
 .movie-meta {
@@ -424,8 +459,7 @@ onMounted(() => {
   min-height: 1.2rem;
 }
 
-.movie-duration,
-.movie-age {
+.movie-duration {
   white-space: nowrap;
 }
 

@@ -1,25 +1,25 @@
 <template>
-  <div class="concerts-view">
+  <div class="theatre-view">
     <div class="container">
       <div class="page-header">
-        <h2 class="page-title">Концерты</h2>
+        <h2 class="page-title">Театр</h2>
         <p class="page-subtitle">
-          Актуальные концерты в Алматы
+          Спектакли и постановки в Алматы
         </p>
       </div>
 
-      <div v-if="concertsStore.loading" class="loading-state">
+      <div v-if="theatreStore.loading" class="loading-state">
         <div class="spinner"></div>
-        <p>Загрузка концертов...</p>
+        <p>Загрузка...</p>
       </div>
 
-      <div v-else-if="concertsStore.error" class="error-state">
-        <p class="error-message">{{ concertsStore.error }}</p>
-        <button class="retry-btn" @click="concertsStore.fetchConcerts">Попробовать снова</button>
+      <div v-else-if="theatreStore.error" class="error-state">
+        <p class="error-message">{{ theatreStore.error }}</p>
+        <button class="retry-btn" @click="theatreStore.fetchTheatre">Попробовать снова</button>
       </div>
 
-      <div v-else-if="concertsStore.concerts.length > 0" class="concerts-section">
-        <div class="concerts-header">
+      <div v-else-if="theatreStore.events.length > 0" class="theatre-section">
+        <div class="theatre-header">
           <div class="filters">
             <button
               class="filter-btn"
@@ -38,36 +38,43 @@
           </div>
         </div>
 
-        <div class="concerts-grid">
+        <div class="theatre-grid">
           <div
-            v-for="concert in filteredConcerts"
-            :key="concert.id"
-            class="concert-card"
-            @click="selectConcert(concert)"
+            v-for="event in filteredEvents"
+            :key="event.id"
+            class="theatre-card"
+            @click="selectEvent(event)"
           >
-            <div class="concert-poster">
+            <div class="theatre-poster">
               <img
-                :src="concert.poster"
-                :alt="concert.title"
+                :src="getPosterUrl(event.small_poster)"
+                :alt="event.name"
                 class="poster-image"
                 loading="lazy"
                 @error="handleImageError"
               />
+              <div
+                v-if="event.age_restriction >= 0"
+                class="age-badge"
+                :class="getAgeClass(event.age_restriction)"
+              >
+                {{ event.age_restriction }}+
+              </div>
             </div>
-            <div class="concert-info">
-              <h3 class="concert-title">{{ concert.title }}</h3>
-              <div class="concert-meta">
-                <div class="concert-date">
-                  <span class="meta-label">Дата:</span>
-                  <span>{{ formatDateTime(concert.date) }}</span>
+            <div class="theatre-info">
+              <h3 class="theatre-title">{{ event.name }}</h3>
+              <div class="theatre-meta">
+                <div class="theatre-place">
+                  <span class="meta-label">Театр:</span>
+                  <span class="place-text">{{ event.partner_name }}</span>
                 </div>
-                <div class="concert-place">
-                  <span class="meta-label">Место:</span>
-                  <span class="place-hall">{{ concert.place }}<template v-if="concert.hall">, {{ concert.hall }}</template></span>
+                <div class="theatre-session">
+                  <span class="meta-label">Ближайший показ:</span>
+                  <span>{{ formatDate(event.next_session_date) }}</span>
                 </div>
-                <div v-if="concert.price !== null" class="concert-price">
+                <div class="theatre-price">
                   <span class="meta-label">Цена:</span>
-                  <span class="price-value">от {{ formatPrice(concert.price, concert.currency) }}</span>
+                  <span class="price-value">от {{ formatPrice(event.price_from) }}</span>
                 </div>
               </div>
             </div>
@@ -76,8 +83,8 @@
       </div>
 
       <div v-else class="empty-state">
-        <p>Концерты не найдены</p>
-        <button class="retry-btn" @click="concertsStore.fetchConcerts">Обновить</button>
+        <p>Спектакли не найдены</p>
+        <button class="retry-btn" @click="theatreStore.fetchTheatre">Обновить</button>
       </div>
     </div>
   </div>
@@ -85,35 +92,46 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { useConcertsStore } from '@/stores/concerts'
-import type { Concert } from '@/services/api'
+import { useTheatreStore } from '@/stores/theatre'
+import type { TheatreEvent } from '@/services/api'
 
-const concertsStore = useConcertsStore()
+const theatreStore = useTheatreStore()
 const filter = ref<'all' | 'upcoming'>('all')
 
-const filteredConcerts = computed(() => {
+const filteredEvents = computed(() => {
   switch (filter.value) {
     case 'upcoming':
-      return concertsStore.upcomingConcerts
+      return theatreStore.upcomingEvents
     default:
-      return concertsStore.concerts
+      return theatreStore.events
   }
 })
 
-const formatDateTime = (dateString: string): string => {
+const formatDate = (dateString: string): string => {
   const date = new Date(dateString)
   return date.toLocaleString('ru-RU', {
     day: 'numeric',
     month: 'long',
     year: 'numeric',
     hour: '2-digit',
-    minute: '2-digit'
+    minute: '2-digit',
   })
 }
 
-const formatPrice = (price: number, currency: string | null): string => {
-  const formattedPrice = new Intl.NumberFormat('ru-RU').format(price)
-  return currency ? `${formattedPrice} ${currency}` : `${formattedPrice} ₸`
+const formatPrice = (price: number): string => {
+  return `${new Intl.NumberFormat('ru-RU').format(price)} ₸`
+}
+
+const getPosterUrl = (posterUrl: string): string => {
+  if (!posterUrl) return posterUrl
+  if (!posterUrl.includes('cdn.kino.kz')) return posterUrl
+  return posterUrl.replace(/\/p\d+x\d+\.webp$/i, '/p344x489.webp')
+}
+
+const getAgeClass = (age: number): string => {
+  if (age <= 6) return 'age-family'
+  if (age <= 16) return 'age-teen'
+  return 'age-adult'
 }
 
 const handleImageError = (event: Event) => {
@@ -121,20 +139,20 @@ const handleImageError = (event: Event) => {
   img.src = 'https://via.placeholder.com/300x400?text=No+Poster'
 }
 
-const selectConcert = (concert: Concert) => {
-  concertsStore.selectConcert(concert)
-  if (concert.url) {
-    window.open(concert.url, '_blank')
+const selectEvent = (event: TheatreEvent) => {
+  theatreStore.selectEvent(event)
+  if (event.event_url) {
+    window.open(event.event_url, '_blank')
   }
 }
 
 onMounted(() => {
-  concertsStore.fetchConcerts()
+  theatreStore.fetchTheatre()
 })
 </script>
 
 <style scoped>
-.concerts-view {
+.theatre-view {
   min-height: calc(100vh - 80px);
   background: linear-gradient(to bottom, #f5f7fa 0%, #ffffff 100%);
   padding: 2rem 0;
@@ -207,13 +225,14 @@ onMounted(() => {
   border-radius: 8px;
   font-weight: 600;
   cursor: pointer;
+  transition: all 0.2s;
 }
 
 .retry-btn:hover {
   background: #5568d3;
 }
 
-.concerts-header {
+.theatre-header {
   display: flex;
   justify-content: flex-start;
   align-items: center;
@@ -235,6 +254,7 @@ onMounted(() => {
   border-radius: 8px;
   font-weight: 600;
   cursor: pointer;
+  transition: all 0.2s;
   font-size: 0.9rem;
 }
 
@@ -247,13 +267,13 @@ onMounted(() => {
   color: white;
 }
 
-.concerts-grid {
+.theatre-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 2rem;
 }
 
-.concert-card {
+.theatre-card {
   background: white;
   border-radius: 12px;
   overflow: hidden;
@@ -264,12 +284,12 @@ onMounted(() => {
   flex-direction: column;
 }
 
-.concert-card:hover {
+.theatre-card:hover {
   transform: translateY(-4px);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
 }
 
-.concert-poster {
+.theatre-poster {
   position: relative;
   width: 100%;
   padding-top: 145%;
@@ -288,7 +308,31 @@ onMounted(() => {
   image-rendering: -webkit-optimize-contrast;
 }
 
-.concert-info {
+.age-badge {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  color: white;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.age-badge.age-family {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+}
+
+.age-badge.age-teen {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+}
+
+.age-badge.age-adult {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+}
+
+.theatre-info {
   padding: 1rem;
   display: flex;
   flex-direction: column;
@@ -296,7 +340,7 @@ onMounted(() => {
   height: 100%;
 }
 
-.concert-title {
+.theatre-title {
   font-size: 1rem;
   font-weight: 700;
   color: #1a202c;
@@ -309,7 +353,7 @@ onMounted(() => {
   min-height: 2.6em;
 }
 
-.concert-meta {
+.theatre-meta {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
@@ -318,20 +362,20 @@ onMounted(() => {
   flex: 1;
 }
 
-.concert-date,
-.concert-place,
-.concert-price {
+.theatre-place,
+.theatre-session,
+.theatre-price {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
   min-height: 2.25rem;
 }
 
-.concert-place {
+.theatre-place {
   min-height: 3rem;
 }
 
-.concert-price {
+.theatre-price {
   margin-top: auto;
   padding-top: 0.5rem;
 }
@@ -344,7 +388,7 @@ onMounted(() => {
   letter-spacing: 0.5px;
 }
 
-.place-hall {
+.place-text {
   line-height: 1.4;
 }
 
@@ -366,12 +410,12 @@ onMounted(() => {
 }
 
 @media (max-width: 768px) {
-  .concerts-grid {
+  .theatre-grid {
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
     gap: 1.5rem;
   }
 
-  .concerts-header {
+  .theatre-header {
     flex-direction: column;
     align-items: flex-start;
   }
