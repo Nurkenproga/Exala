@@ -73,8 +73,8 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { useEventsStore } from '@/stores/events'
-import type { Event } from '@/stores/events'
+import { useEventsStore } from '../stores/events'
+import type { Event } from '../stores/events'
 
 const eventsStore = useEventsStore()
 
@@ -298,6 +298,7 @@ onMounted(() => {
   font-size: 0.95rem;
   line-height: 1.6;
   margin: 0 0 1rem 0;
+  line-clamp: 2;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;

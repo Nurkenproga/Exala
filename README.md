@@ -1,48 +1,92 @@
 # Exala
 
-This template should help get you started developing with Vue 3 in Vite.
+Платформа событий в Алматы: афиша кино, концертов, театра и стендапов в одном месте.
 
-## Recommended IDE Setup
+---
 
-[VS Code](https://code.visualstudio.com/) + [Vue (Official)](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
+## Возможности
 
-## Recommended Browser Setup
+| Раздел | Описание |
+|--------|----------|
+| **События** | Общая лента событий |
+| **Фильмы** | Афиша кинотеатров: премьеры, предпродажа, рейтинг, возраст, постеры |
+| **Концерты** | Концерты с датой, площадкой и ценой |
+| **Театр** | Театральные постановки, ближайшие показы |
+| **Стендапы** | Стендап-концерты и комедийные шоу, баннеры, категории, кнопка «Купить билет» |
+| **Мои NFT** | Раздел с подключением кошелька (ethers) |
+| **Профиль** | Профиль пользователя |
 
-- Chromium-based browsers (Chrome, Edge, Brave, etc.):
-  - [Vue.js devtools](https://chromewebstore.google.com/detail/vuejs-devtools/nhdogjmejiglipccpnnnanhbledajbpd)
-  - [Turn on Custom Object Formatter in Chrome DevTools](http://bit.ly/object-formatters)
-- Firefox:
-  - [Vue.js devtools](https://addons.mozilla.org/en-US/firefox/addon/vue-js-devtools/)
-  - [Turn on Custom Object Formatter in Firefox DevTools](https://fxdx.dev/firefox-devtools-custom-object-formatters/)
+Данные подгружаются с бэкенда по API (фильмы, концерты, театр, стендапы).
 
-## Type Support for `.vue` Imports in TS
+---
 
-TypeScript cannot handle type information for `.vue` imports by default, so we replace the `tsc` CLI with `vue-tsc` for type checking. In editors, we need [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) to make the TypeScript language service aware of `.vue` types.
+## Стек
 
-## Customize configuration
+- **Vue 3** + **TypeScript**
+- **Vite** — сборка и dev-сервер
+- **Vue Router** — маршрутизация
+- **Pinia** — состояние (stores для событий, фильмов, концертов, театра, стендапов, кошелька)
+- **ethers** — работа с криптокошельком в разделе NFT
 
-See [Vite Configuration Reference](https://vite.dev/config/).
+---
 
-## Project Setup
+## Команда
 
-```sh
+| Имя | Роль |
+|-----|------|
+| **Багдат Камила** | UI/UX, userflow |
+| **Адилбек Ануар** | Backend |
+| **Байшоланов Алибек** | iOS development |
+| **Атабай Нуркен** | Web development |
+
+
+---
+
+## Установка и запуск
+
+**Требования:** Node.js 20+ или 22+
+
+```bash
+# Клонировать репозиторий
+git clone https://github.com/ваш-username/exala.git
+cd exala
+
+# Установить зависимости
 npm install
-```
 
-### Compile and Hot-Reload for Development
-
-```sh
+# Запуск в режиме разработки
 npm run dev
 ```
 
-### Type-Check, Compile and Minify for Production
+**Сборка для продакшена:**
 
-```sh
+```bash
 npm run build
+npm run preview   # просмотр собранной версии
 ```
 
-### Run Unit Tests with [Vitest](https://vitest.dev/)
+---
 
-```sh
-npm run test:unit
+## Переменные окружения
+
+Создайте файл `.env` в корне проекта:
+
+```env
+VITE_API_BASE_URL=http://localhost:8000
+```
+
+В режиме разработки запросы к API можно проксировать через Vite (настройка в `vite.config.ts`).
+
+---
+
+## Структура проекта
+
+```
+src/
+├── components/     # Переиспользуемые компоненты
+├── views/          # Страницы: Events, Movies, Concerts, Theatre, Standups, NFT, Profile
+├── stores/         # Pinia: events, movies, concerts, theatre, standups, wallet
+├── services/       # API, кошелёк, NFT
+├── router/         # Маршруты
+└── main.ts
 ```

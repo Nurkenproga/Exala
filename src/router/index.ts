@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import EventsView from '../views/EventsView.vue'
+import { authService } from '@/services/auth'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -37,13 +38,41 @@ const router = createRouter({
       path: '/nft',
       name: 'nft',
       component: () => import('../views/NFTView.vue'),
+      meta: { requiresAuth: true },
     },
     {
       path: '/profile',
       name: 'profile',
-      component: () => import('../views/EventsView.vue'),
+      component: () => import('../views/ProfileView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/login',
+      name: 'login',
+      component: () => import('../views/LoginView.vue'),
+      meta: { guestOnly: true },
+    },
+    {
+      path: '/register',
+      name: 'register',
+      component: () => import('../views/RegisterView.vue'),
+      meta: { guestOnly: true },
     },
   ],
+})
+
+router.beforeEach((to) => {
+  const isAuth = authService.isAuthenticated()
+
+  if (to.meta.requiresAuth && !isAuth) {
+    return { name: 'login', query: { redirect: to.fullPath } }
+  }
+
+  if (to.meta.guestOnly && isAuth) {
+    return { name: 'events' }
+  }
+
+  return true
 })
 
 export default router

@@ -84,6 +84,7 @@ class ApiService {
 
   private async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
     const url = this.getRequestUrl(endpoint)
+    const token = localStorage.getItem('authToken')
     
     console.log('API Request:', url)
 
@@ -91,6 +92,7 @@ class ApiService {
       const response = await fetch(url, {
         method: options?.method || 'GET',
         headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
           ...options?.headers,
         },
       })

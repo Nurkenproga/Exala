@@ -47,15 +47,17 @@
         >
           Standups
         </RouterLink>
-        <RouterLink 
-          to="/nft" 
+        <RouterLink
+          v-if="isAuthenticated"
+          to="/nft"
           class="nav-link" 
           active-class="active"
         >
           Мои NFT
         </RouterLink>
-        <RouterLink 
-          to="/profile" 
+        <RouterLink
+          v-if="isAuthenticated"
+          to="/profile"
           class="nav-link" 
           active-class="active"
         >
@@ -64,13 +66,27 @@
       </nav>
 
       <div class="header-actions">
+        <div v-if="!isAuthenticated" class="auth-links">
+          <RouterLink to="/login" class="auth-link">Войти</RouterLink>
+          <RouterLink to="/register" class="auth-link auth-link-primary">Регистрация</RouterLink>
+        </div>
+        <button
+          v-if="isAuthenticated"
+          class="auth-btn"
+          @click="handleLogout"
+        >
+          Выйти
+        </button>
         <button 
           class="connect-wallet-btn" 
           :class="{ 'connected': isConnected, 'connecting': isConnecting }"
           @click="handleConnectWallet"
-          :disabled="isConnecting"
+          :disabled="!isAuthenticated || isConnecting"
         >
-          <span v-if="isConnecting" class="btn-content">
+          <span v-if="!isAuthenticated" class="btn-content">
+            Войдите, чтобы подключить кошелек
+          </span>
+          <span v-else-if="isConnecting" class="btn-content">
             Подключение...
           </span>
           <span v-else-if="!isConnected" class="btn-content">
@@ -87,15 +103,23 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, computed } from 'vue'
+import { onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import { storeToRefs } from 'pinia'
-import { useWalletStore } from '@/stores/wallet'
+import { useWalletStore } from '../stores/wallet'
+import { useAuthStore } from '../stores/auth'
 
 const walletStore = useWalletStore()
 const { isConnected, isConnecting, truncatedAddress, isWalletInstalled, error } = storeToRefs(walletStore)
+const authStore = useAuthStore()
+const { isAuthenticated } = storeToRefs(authStore)
 
 const handleConnectWallet = async () => {
+  if (!isAuthenticated.value) {
+    alert('Сначала войдите в аккаунт')
+    return
+  }
+
   try {
     if (isConnected.value) {
       await walletStore.disconnect()
@@ -107,6 +131,10 @@ const handleConnectWallet = async () => {
     const errorMessage = error.value || err.message || 'Не удалось подключить кошелек'
     alert(errorMessage)
   }
+}
+
+const handleLogout = () => {
+  authStore.logout()
 }
 
 onMounted(() => {
@@ -181,20 +209,22 @@ onMounted(() => {
   flex: 1;
   justify-content: center;
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  min-width: 0;
 }
 
 .nav-link {
   color: white;
   text-decoration: none;
   font-weight: 500;
-  padding: 0.625rem 1.25rem;
+  padding: 0.55rem 0.9rem;
   border-radius: 10px;
   transition: all 0.2s ease;
   position: relative;
   display: flex;
   align-items: center;
-  font-size: 0.95rem;
+  font-size: 0.88rem;
+  white-space: nowrap;
 }
 
 .nav-link::before {
@@ -225,7 +255,50 @@ onMounted(() => {
 
 /* Кнопка подключения кошелька */
 .header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
   flex-shrink: 0;
+}
+
+.auth-links {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.auth-link {
+  color: #fff;
+  text-decoration: none;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  padding: 0.5rem 0.85rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.auth-link:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.auth-link-primary {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.auth-btn {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 0.65rem 1rem;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.auth-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
 }
 
 .connect-wallet-btn {
@@ -258,7 +331,7 @@ onMounted(() => {
 }
 
 .connect-wallet-btn:disabled {
-  opacity: 0.6;
+  opacity: 0.55;
   cursor: not-allowed;
 }
 
@@ -305,8 +378,8 @@ onMounted(() => {
   }
 
   .nav-link {
-    padding: 0.5rem 0.75rem;
-    font-size: 0.85rem;
+    padding: 0.45rem 0.6rem;
+    font-size: 0.8rem;
   }
 }
 
@@ -339,6 +412,11 @@ onMounted(() => {
     font-size: 0.85rem;
   }
 
+  .auth-link {
+    padding: 0.45rem 0.7rem;
+    font-size: 0.8rem;
+  }
+
   .wallet-address {
     display: none;
   }
@@ -366,6 +444,10 @@ onMounted(() => {
     padding: 0.625rem;
     min-width: 44px;
     justify-content: center;
+  }
+
+  .auth-links {
+    gap: 0.35rem;
   }
 }
 </style>
