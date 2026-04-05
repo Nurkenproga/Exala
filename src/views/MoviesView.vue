@@ -165,7 +165,10 @@ onMounted(() => {
 <style scoped>
 .movies-view {
   min-height: calc(100vh - 80px);
-  background: linear-gradient(to bottom, #f5f7fa 0%, #ffffff 100%);
+  background:
+    radial-gradient(circle at 10% 0%, rgba(208, 66, 94, 0.18), transparent 33%),
+    radial-gradient(circle at 92% 18%, rgba(72, 146, 255, 0.2), transparent 34%),
+    linear-gradient(180deg, #090d1f 0%, #080a16 60%, #05070f 100%);
   padding: 2rem 0;
 }
 
@@ -183,14 +186,15 @@ onMounted(() => {
 
 .page-title {
   font-size: 2.5rem;
-  font-weight: 700;
-  color: #1a202c;
+  font-weight: 800;
+  color: #f4f7ff;
   margin: 0 0 1rem 0;
+  letter-spacing: -0.03em;
 }
 
 .page-subtitle {
   font-size: 1.125rem;
-  color: #718096;
+  color: #a8b5de;
   max-width: 600px;
   margin: 0 auto;
 }
@@ -223,7 +227,7 @@ onMounted(() => {
 }
 
 .error-message {
-  color: #e53e3e;
+  color: #ffc1cc;
   font-size: 1.125rem;
   margin-bottom: 1.5rem;
 }
@@ -250,6 +254,10 @@ onMounted(() => {
   margin-bottom: 2rem;
   flex-wrap: wrap;
   gap: 1rem;
+  padding: 0.9rem;
+  border-radius: 16px;
+  border: 1px solid rgba(167, 179, 235, 0.24);
+  background: rgba(12, 17, 34, 0.78);
 }
 
 .filters {
@@ -258,11 +266,11 @@ onMounted(() => {
 }
 
 .filter-btn {
-  background: white;
-  color: #667eea;
-  border: 2px solid #667eea;
+  background: rgba(255, 255, 255, 0.03);
+  color: #e9eeff;
+  border: 1px solid rgba(167, 179, 235, 0.35);
   padding: 0.5rem 1rem;
-  border-radius: 8px;
+  border-radius: 999px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
@@ -270,11 +278,12 @@ onMounted(() => {
 }
 
 .filter-btn:hover {
-  background: #f7fafc;
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .filter-btn.active {
-  background: #667eea;
+  background: linear-gradient(120deg, #7d4dff, #6a6cff);
+  border-color: transparent;
   color: white;
 }
 
@@ -285,10 +294,11 @@ onMounted(() => {
 }
 
 .movie-card {
-  background: white;
-  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(18, 22, 44, 0.97), rgba(9, 12, 24, 0.95));
+  border-radius: 18px;
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(167, 179, 235, 0.2);
+  box-shadow: 0 16px 30px rgba(0, 0, 0, 0.32);
   transition: all 0.3s;
   cursor: pointer;
   display: flex;
@@ -297,7 +307,8 @@ onMounted(() => {
 
 .movie-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  border-color: rgba(79, 157, 255, 0.65);
+  box-shadow: 0 22px 35px rgba(0, 0, 0, 0.42);
 }
 
 .movie-poster {
@@ -305,7 +316,15 @@ onMounted(() => {
   width: 100%;
   padding-top: 145%;
   overflow: hidden;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(145deg, #2d2f6f 0%, #1a1d3e 100%);
+}
+
+.poster-image {
+  transition: transform 0.35s ease;
+}
+
+.movie-card:hover .poster-image {
+  transform: scale(1.06);
 }
 
 .poster-image {
@@ -347,15 +366,14 @@ onMounted(() => {
   position: absolute;
   bottom: 0.5rem;
   right: 0.5rem;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(211, 84, 113, 0.88);
   color: white;
   padding: 0.2rem 0.45rem;
-  border-radius: 4px;
+  border-radius: 999px;
   font-size: 0.65rem;
   font-weight: 600;
   letter-spacing: 0.02em;
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .rating-badge {
@@ -416,7 +434,7 @@ onMounted(() => {
 .movie-title {
   font-size: 1rem;
   font-weight: 700;
-  color: #1a202c;
+  color: #eef2ff;
   margin: 0 0 0.25rem 0;
   line-height: 1.3;
   display: -webkit-box;
@@ -428,7 +446,7 @@ onMounted(() => {
 
 .movie-title-original {
   font-size: 0.85rem;
-  color: #718096;
+  color: #9cabd8;
   margin: 0 0 0.5rem 0;
   font-style: italic;
   min-height: 1.25rem;
@@ -441,7 +459,7 @@ onMounted(() => {
   gap: 0.5rem;
   margin-bottom: 0;
   font-size: 0.8rem;
-  color: #718096;
+  color: #b4c1e6;
 }
 
 .movie-genres {
@@ -465,7 +483,7 @@ onMounted(() => {
 
 .movie-premiere {
   font-size: 0.85rem;
-  color: #4a5568;
+  color: #c8d3f2;
   font-weight: 500;
   margin-top: auto;
   padding-top: 0.75rem;
@@ -475,7 +493,7 @@ onMounted(() => {
 .empty-state {
   text-align: center;
   padding: 4rem 2rem;
-  color: #718096;
+  color: #b2bde0;
 }
 
 .empty-state p {

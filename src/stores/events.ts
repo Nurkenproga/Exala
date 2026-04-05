@@ -33,10 +33,8 @@ export const useEventsStore = defineStore('events', () => {
   const eventsByCategory = computed(() => {
     const grouped: Record<string, Event[]> = {}
     events.value.forEach(event => {
-      if (!grouped[event.category]) {
-        grouped[event.category] = []
-      }
-      grouped[event.category].push(event)
+      const bucket = (grouped[event.category] ??= [])
+      bucket.push(event)
     })
     return grouped
   })

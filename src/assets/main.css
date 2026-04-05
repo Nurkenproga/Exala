@@ -1,4 +1,5 @@
 @import './base.css';
+@import './project-theme.css';
 
 #app {
   width: 100%;

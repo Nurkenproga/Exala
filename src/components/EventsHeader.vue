@@ -26,6 +26,13 @@
         >
           Movies
         </RouterLink>
+        <RouterLink
+          to="/map"
+          class="nav-link"
+          active-class="active"
+        >
+          Карта
+        </RouterLink>
         <RouterLink 
           to="/concerts" 
           class="nav-link" 
@@ -144,39 +151,41 @@ onMounted(() => {
 
 <style scoped>
 .events-header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  background:
+    linear-gradient(120deg, rgba(9, 14, 32, 0.95), rgba(12, 18, 40, 0.95)),
+    radial-gradient(circle at 14% 0%, rgba(125, 77, 255, 0.22), transparent 35%),
+    radial-gradient(circle at 88% 22%, rgba(79, 157, 255, 0.2), transparent 35%);
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(7px);
   position: sticky;
   top: 0;
-  z-index: 1000;
+  z-index: 1200;
   width: 100%;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(164, 178, 237, 0.22);
 }
 
 .header-container {
-  max-width: 1400px;
+  width: min(1240px, 92vw);
   margin: 0 auto;
-  padding: 1rem 2rem;
+  padding: 0.9rem 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 2rem;
-  width: 100%;
+  gap: 1rem;
 }
 
-/* Логотип */
 .logo-section {
   flex-shrink: 0;
 }
 
 .logo-link {
   text-decoration: none;
-  color: white;
+  color: #f3f6ff;
   transition: transform 0.2s, opacity 0.2s;
 }
 
 .logo-link:hover {
-  opacity: 0.9;
+  opacity: 0.95;
   transform: scale(1.02);
 }
 
@@ -187,147 +196,134 @@ onMounted(() => {
 
 .logo-text {
   margin: 0;
-  font-size: 1.75rem;
-  font-weight: 700;
-  letter-spacing: -0.5px;
+  font-size: 1.9rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
   line-height: 1;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  font-family: 'Sora', sans-serif;
 }
 
 .logo-subtitle {
   font-size: 0.75rem;
-  opacity: 0.95;
-  font-weight: 400;
+  color: #a8b4de;
+  font-weight: 500;
   margin-top: 0.125rem;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.02em;
 }
 
-/* Навигация */
 .main-nav {
   display: flex;
-  gap: 0.5rem;
+  gap: 0.28rem;
   flex: 1;
   justify-content: center;
   align-items: center;
   flex-wrap: nowrap;
   min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.main-nav::-webkit-scrollbar {
+  display: none;
 }
 
 .nav-link {
-  color: white;
+  color: #d6defd;
   text-decoration: none;
-  font-weight: 500;
-  padding: 0.55rem 0.9rem;
-  border-radius: 10px;
+  font-weight: 600;
+  padding: 0.46rem 0.78rem;
+  border-radius: 999px;
   transition: all 0.2s ease;
-  position: relative;
   display: flex;
   align-items: center;
-  font-size: 0.88rem;
+  font-size: 0.84rem;
   white-space: nowrap;
-}
-
-.nav-link::before {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 0;
-  height: 2px;
-  background: white;
-  transition: width 0.3s ease;
+  border: 1px solid transparent;
 }
 
 .nav-link:hover {
-  background-color: rgba(255, 255, 255, 0.15);
-  transform: translateY(-1px);
+  color: #f1f4ff;
+  border-color: rgba(164, 178, 237, 0.35);
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .nav-link.active {
-  background-color: rgba(255, 255, 255, 0.25);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  background: linear-gradient(120deg, rgba(125, 77, 255, 0.95), rgba(81, 95, 255, 0.95));
+  border-color: transparent;
+  color: #fff;
 }
 
-.nav-link.active::before {
-  width: 60%;
-}
-
-/* Кнопка подключения кошелька */
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.55rem;
   flex-shrink: 0;
 }
 
 .auth-links {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.4rem;
 }
 
 .auth-link {
-  color: #fff;
+  color: #ebefff;
   text-decoration: none;
-  border: 1px solid rgba(255, 255, 255, 0.35);
-  padding: 0.5rem 0.85rem;
-  border-radius: 8px;
-  font-size: 0.85rem;
+  border: 1px solid rgba(164, 178, 237, 0.35);
+  padding: 0.42rem 0.72rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
   font-weight: 600;
   transition: all 0.2s ease;
 }
 
 .auth-link:hover {
-  background: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .auth-link-primary {
-  background: rgba(255, 255, 255, 0.22);
+  background: linear-gradient(120deg, rgba(125, 77, 255, 0.95), rgba(81, 95, 255, 0.95));
+  border-color: transparent;
 }
 
 .auth-btn {
-  background: rgba(255, 255, 255, 0.15);
-  color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  padding: 0.65rem 1rem;
-  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #ebefff;
+  border: 1px solid rgba(164, 178, 237, 0.35);
+  padding: 0.48rem 0.82rem;
+  border-radius: 999px;
   font-weight: 600;
   cursor: pointer;
   transition: background 0.2s ease;
+  font-size: 0.8rem;
 }
 
 .auth-btn:hover {
-  background: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.14);
 }
 
 .connect-wallet-btn {
-  background: white;
-  color: #667eea;
-  border: none;
-  padding: 0.75rem 1.5rem;
-  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #ebefff;
+  border: 1px solid rgba(164, 178, 237, 0.35);
+  padding: 0.5rem 0.92rem;
+  border-radius: 999px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
-  font-size: 0.9rem;
+  font-size: 0.79rem;
   display: flex;
   align-items: center;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .connect-wallet-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
-}
-
-.connect-wallet-btn:active {
-  transform: translateY(0);
+  background: rgba(255, 255, 255, 0.14);
 }
 
 .connect-wallet-btn.connected {
-  background: rgba(255, 255, 255, 0.95);
-  padding: 0.625rem 1.25rem;
+  background: rgba(255, 255, 255, 0.94);
+  color: #2f3c74;
+  border-color: transparent;
 }
 
 .connect-wallet-btn:disabled {
@@ -351,70 +347,75 @@ onMounted(() => {
 
 .wallet-address {
   font-family: 'Courier New', monospace;
-  font-size: 0.85rem;
+  font-size: 0.75rem;
   font-weight: 600;
-  color: #667eea;
+  color: #5462b7;
 }
 
 .wallet-badge {
-  background: #10b981;
+  background: #17b77f;
   color: white;
-  padding: 0.25rem 0.625rem;
+  padding: 0.22rem 0.56rem;
   border-radius: 6px;
-  font-size: 0.75rem;
+  font-size: 0.68rem;
   font-weight: 600;
   white-space: nowrap;
 }
 
-/* Адаптивность */
 @media (max-width: 1024px) {
   .header-container {
-    padding: 1rem 1.5rem;
-    gap: 1.5rem;
+    width: min(1240px, 94vw);
+    padding: 0.8rem 0;
+    gap: 0.7rem;
   }
 
-  .main-nav {
-    gap: 0.25rem;
+  .logo-text {
+    font-size: 1.55rem;
   }
 
   .nav-link {
-    padding: 0.45rem 0.6rem;
-    font-size: 0.8rem;
+    font-size: 0.78rem;
+    padding: 0.42rem 0.62rem;
+  }
+
+  .auth-link,
+  .auth-btn,
+  .connect-wallet-btn {
+    font-size: 0.74rem;
   }
 }
 
 @media (max-width: 768px) {
   .header-container {
+    width: min(1240px, 95vw);
+    padding: 0.7rem 0;
     flex-wrap: wrap;
-    padding: 1rem;
-    gap: 1rem;
+    row-gap: 0.6rem;
   }
 
   .logo-text {
-    font-size: 1.5rem;
+    font-size: 1.35rem;
   }
 
   .logo-subtitle {
-    font-size: 0.7rem;
+    font-size: 0.65rem;
   }
 
   .main-nav {
     order: 3;
     width: 100%;
-    justify-content: space-around;
-    margin-top: 0.5rem;
-    padding-top: 0.5rem;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    justify-content: flex-start;
+    margin-top: 0.2rem;
+    padding-top: 0.45rem;
+    border-top: 1px solid rgba(164, 178, 237, 0.2);
   }
 
   .connect-wallet-btn {
-    padding: 0.625rem 1rem;
-    font-size: 0.85rem;
+    padding: 0.45rem 0.76rem;
   }
 
   .auth-link {
-    padding: 0.45rem 0.7rem;
-    font-size: 0.8rem;
+    padding: 0.4rem 0.62rem;
   }
 
   .wallet-address {
@@ -429,25 +430,30 @@ onMounted(() => {
 
 @media (max-width: 480px) {
   .header-container {
-    padding: 0.75rem;
+    width: min(1240px, 96vw);
+    padding: 0.56rem 0;
   }
 
   .logo-text-wrapper {
+    display: flex;
+  }
+
+  .logo-subtitle {
     display: none;
   }
 
   .connect-wallet-btn .btn-content {
-    font-size: 0.8rem;
+    font-size: 0.72rem;
   }
 
   .connect-wallet-btn {
-    padding: 0.625rem;
-    min-width: 44px;
+    padding: 0.4rem 0.55rem;
+    min-width: 42px;
     justify-content: center;
   }
 
   .auth-links {
-    gap: 0.35rem;
+    display: none;
   }
 }
 </style>

@@ -127,8 +127,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
-import { useWalletStore } from '@/stores/wallet'
+import { useAuthStore } from '../stores/auth'
+import { useWalletStore } from '../stores/wallet'
 
 const router = useRouter()
 const authStore = useAuthStore()

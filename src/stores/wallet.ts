@@ -102,10 +102,11 @@ export const useWalletStore = defineStore('wallet', () => {
 
   const setupEventListeners = () => {
     walletService.onAccountsChanged((accounts: string[]) => {
-      if (accounts.length === 0) {
+      const nextAccount = accounts[0]
+      if (!nextAccount) {
         disconnect()
-      } else if (accounts[0] !== address.value) {
-        address.value = accounts[0]
+      } else if (nextAccount !== address.value) {
+        address.value = nextAccount
         connect()
       }
     })
