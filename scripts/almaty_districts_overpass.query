@@ -1,0 +1,13 @@
+[out:json][timeout:180];
+area["name"="Алматы"]["boundary"="administrative"]["admin_level"="6"]->.city;
+(
+  relation["boundary"="administrative"]["admin_level"="8"]["name"="Алмалинский район"](area.city);
+  relation["boundary"="administrative"]["admin_level"="8"]["name"="Ауэзовский район"](area.city);
+  relation["boundary"="administrative"]["admin_level"="8"]["name"="Бостандыкский район"](area.city);
+  relation["boundary"="administrative"]["admin_level"="8"]["name"="Медеуский район"](area.city);
+  relation["boundary"="administrative"]["admin_level"="8"]["name"="Алатауский район"](area.city);
+  relation["boundary"="administrative"]["admin_level"="8"]["name"="Жетысуский район"](area.city);
+  relation["boundary"="administrative"]["admin_level"="8"]["name"="Турксибский район"](area.city);
+  relation["boundary"="administrative"]["admin_level"="8"]["name"="Наурызбайский район"](area.city);
+);
+out ids tags geom;

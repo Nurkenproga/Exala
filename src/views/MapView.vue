@@ -9,7 +9,7 @@
       <section class="map-card">
         <button class="locate-btn" type="button" @click="locateMe">Мое местоположение</button>
         <div ref="mapEl" class="map-canvas"></div>
-        <div class="map-note">Границы районов показаны условно для визуальной навигации.</div>
+        <div class="map-note">Источник: OpenStreetMap (административные границы районов).</div>
       </section>
     </div>
   </div>
@@ -18,161 +18,70 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue'
 import L from 'leaflet'
+import districtsGeoJson from '@/data/almaty-districts.osm.json'
 
 const mapEl = ref<HTMLElement | null>(null)
 let mapInstance: L.Map | null = null
 let userMarker: L.CircleMarker | null = null
 let userRadius: L.Circle | null = null
 
-const districts: Array<{
+type DistrictProperties = {
   name: string
-  points: [number, number][]
+  slug: string
   color: string
-  summary: string
-  details: string
-}> = [
-  {
-    name: 'Алмалинский',
-    color: '#9f6bff',
-    summary: 'Центральный административный и культурный район.',
-    details:
-      'Центральный район с историческим ядром города. В описании границ упоминаются проспекты Назарбаева, Абая, Райымбека и район озера Сайран.',
-    points: [
-      [43.256, 76.90],
-      [43.248, 76.905],
-      [43.24, 76.895],
-      [43.246, 76.88],
-      [43.255, 76.883],
-    ],
-  },
-  {
-    name: 'Бостандыкский',
-    color: '#4f9dff',
-    summary: 'Современный южный район с деловыми и жилыми кварталами.',
-    details:
-      'Один из самых активных районов Алматы: бизнес-центры, университеты и плотная жилая застройка. Расположен в южной части между городской рекой и восточной границей города.',
-    points: [
-      [43.25, 76.95],
-      [43.235, 76.97],
-      [43.215, 76.95],
-      [43.223, 76.91],
-      [43.245, 76.915],
-    ],
-  },
-  {
-    name: 'Медеуский',
-    color: '#2cb6c8',
-    summary: 'Исторический и горный район, включая Медеу.',
-    details:
-      'Тянется от центральной части к югу и востоку, включает предгорья Заилийского Алатау и высокогорные зоны. Именно здесь расположены знаковые туристические локации.',
-    points: [
-      [43.24, 76.91],
-      [43.225, 76.95],
-      [43.2, 76.93],
-      [43.19, 76.88],
-      [43.215, 76.86],
-    ],
-  },
-  {
-    name: 'Ауэзовский',
-    color: '#7ad65e',
-    summary: 'Крупный жилой район в западной части Алматы.',
-    details:
-      'Западный район с плотной жилой застройкой. В описании границ упоминаются проспект Райымбека, Каргалинка и Большая Алматинка, а также соседство с Бостандыкским районом.',
-    points: [
-      [43.255, 76.87],
-      [43.245, 76.88],
-      [43.23, 76.86],
-      [43.235, 76.83],
-      [43.255, 76.835],
-    ],
-  },
-  {
-    name: 'Наурызбайский',
-    color: '#f9b14a',
-    summary: 'Новый район на юго-западе города.',
-    details:
-      'Один из самых новых районов, сформирован за счет присоединения пригородных территорий (в том числе Каргалы, Карагайлы, Акжар).',
-    points: [
-      [43.255, 76.835],
-      [43.235, 76.83],
-      [43.22, 76.79],
-      [43.245, 76.77],
-      [43.265, 76.8],
-    ],
-  },
-  {
-    name: 'Алатауский',
-    color: '#f47f59',
-    summary: 'Северный район индустриального и жилого развития.',
-    details:
-      'Развивающийся северный район с новыми жилыми кварталами и промышленными зонами, включая крупные современные проекты застройки.',
-    points: [
-      [43.275, 76.83],
-      [43.255, 76.835],
-      [43.255, 76.87],
-      [43.275, 76.88],
-      [43.29, 76.85],
-    ],
-  },
-  {
-    name: 'Жетысуский',
-    color: '#e862a1',
-    summary: 'Промышленно-жилой район северной части города.',
-    details:
-      'Северная часть Алматы с сочетанием производственных площадок и жилых массивов. Граничит с Турксибским и Алатауским районами.',
-    points: [
-      [43.28, 76.88],
-      [43.255, 76.883],
-      [43.255, 76.90],
-      [43.275, 76.92],
-      [43.29, 76.905],
-    ],
-  },
-  {
-    name: 'Турксибский',
-    color: '#c56bff',
-    summary: 'Восточный район, транспортный узел города.',
-    details:
-      'Восточная часть Алматы, известная транспортной инфраструктурой: аэропорт и железнодорожные узлы.',
-    points: [
-      [43.29, 76.905],
-      [43.275, 76.92],
-      [43.25, 76.95],
-      [43.275, 76.98],
-      [43.305, 76.95],
-    ],
-  },
-]
+}
+
+type DistrictFeature = GeoJSON.Feature<GeoJSON.Geometry, DistrictProperties>
+
+const getDistrictStyle = (feature?: DistrictFeature): L.PathOptions => {
+  const color = feature?.properties?.color || '#7d4dff'
+  return {
+    color,
+    weight: 2,
+    fillColor: color,
+    fillOpacity: 0.18,
+  }
+}
+
+const highlightStyle: L.PathOptions = {
+  weight: 3,
+  fillOpacity: 0.28,
+}
+
+const onEachDistrict = (feature: DistrictFeature, layer: L.Layer) => {
+  const polygon = layer as L.Path
+
+  layer.bindTooltip(feature.properties.name, {
+    sticky: true,
+    className: 'district-label',
+    direction: 'top',
+  })
+
+  layer.bindPopup(
+    `
+    <div style="min-width:220px;line-height:1.45;">
+      <b>${feature.properties.name}</b>
+    </div>
+    `,
+  )
+
+  layer.on('mouseover', () => {
+    polygon.setStyle(highlightStyle)
+  })
+
+  layer.on('mouseout', () => {
+    polygon.setStyle(getDistrictStyle(feature))
+  })
+}
 
 const drawDistricts = (map: L.Map) => {
-  districts.forEach((district) => {
-    const polygon = L.polygon(district.points, {
-      color: district.color,
-      weight: 2,
-      fillColor: district.color,
-      fillOpacity: 0.18,
-    })
-
-    polygon.bindTooltip(district.name, {
-      permanent: true,
-      direction: 'center',
-      className: 'district-label',
-    })
-
-    polygon.bindPopup(`<b>${district.name}</b><br/>Район Алматы`)
-    polygon.bindPopup(
-      `
-      <div style="min-width:220px;line-height:1.45;">
-        <b>${district.name}</b><br/>
-        <span>${district.summary}</span>
-        <hr style="border:none;border-top:1px solid rgba(160,170,220,0.35);margin:8px 0;" />
-        <span>${district.details}</span>
-      </div>
-      `,
-    )
-    polygon.addTo(map)
+  const districtLayer = L.geoJSON(districtsGeoJson as GeoJSON.FeatureCollection, {
+    style: (feature) => getDistrictStyle(feature as DistrictFeature),
+    onEachFeature: (feature, layer) => onEachDistrict(feature as DistrictFeature, layer),
   })
+
+  districtLayer.addTo(map)
+  map.fitBounds(districtLayer.getBounds(), { padding: [12, 12] })
 }
 
 const locateMe = () => {
@@ -238,6 +147,7 @@ onMounted(() => {
     center: [43.2389, 76.8897],
     zoom: 11,
     zoomControl: true,
+    preferCanvas: true,
   })
 
   L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
