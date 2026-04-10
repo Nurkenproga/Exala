@@ -11,23 +11,19 @@
           <h3 class="card-title">Основная информация</h3>
           <div class="row">
             <span class="label">Логин</span>
-            <span class="value">{{ authStore.username || profileMock.username }}</span>
+            <span class="value">{{ profile?.username || authStore.username || '—' }}</span>
           </div>
           <div class="row">
-            <span class="label">Имя</span>
-            <span class="value">{{ profileMock.firstName }}</span>
-          </div>
-          <div class="row">
-            <span class="label">Фамилия</span>
-            <span class="value">{{ profileMock.lastName }}</span>
-          </div>
-          <div class="row">
-            <span class="label">Город</span>
-            <span class="value">{{ profileMock.city }}</span>
+            <span class="label">ID пользователя</span>
+            <span class="value">{{ profile?.id ?? '—' }}</span>
           </div>
           <div class="row">
             <span class="label">Email</span>
-            <span class="value">{{ profileMock.email }}</span>
+            <span class="value">{{ profile?.email || 'Не указан' }}</span>
+          </div>
+          <div class="row">
+            <span class="label">Тип кошелька</span>
+            <span class="value">{{ profile?.wallet_type || '—' }}</span>
           </div>
           <div class="row">
             <span class="label">Статус сессии</span>
@@ -58,7 +54,7 @@
           <div class="row">
             <span class="label">Адрес</span>
             <span class="value mono">
-              {{ walletStore.isConnected ? walletStore.truncatedAddress : '—' }}
+              {{ walletAddressPreview }}
             </span>
           </div>
         </section>
@@ -72,39 +68,47 @@
           <div class="progress-wrap">
             <div class="progress-meta">
               <span>Прогресс до следующего уровня</span>
-              <span>{{ profileMock.levelProgress }}%</span>
+              <span>{{ progressPercent }}%</span>
             </div>
             <div class="progress-track">
-              <div class="progress-fill" :style="{ width: `${profileMock.levelProgress}%` }"></div>
+              <div class="progress-fill" :style="{ width: `${progressPercent}%` }"></div>
             </div>
           </div>
 
           <div class="stats-grid">
             <div class="stat-item">
-              <span class="stat-value">{{ profileMock.nftCount }}</span>
+              <span class="stat-value">{{ profile?.nft_count ?? 0 }}</span>
               <span class="stat-label">NFT</span>
             </div>
             <div class="stat-item">
-              <span class="stat-value">{{ profileMock.visitedEvents }}</span>
+              <span class="stat-value">{{ profile?.events_attended ?? 0 }}</span>
               <span class="stat-label">Посещено</span>
             </div>
             <div class="stat-item">
-              <span class="stat-value">{{ profileMock.rareNftCount }}</span>
-              <span class="stat-label">Редкие NFT</span>
+              <span class="stat-value">{{ profile?.explorer_points ?? 0 }}</span>
+              <span class="stat-label">Очки</span>
             </div>
           </div>
 
           <div class="achievements">
-            <p class="achievements-title">Последние достижения</p>
+            <p class="achievements-title">Социальная статистика</p>
             <ul>
-              <li v-for="item in profileMock.achievements" :key="item">{{ item }}</li>
+              <li>Подписчики: {{ profile?.followers_count ?? 0 }}</li>
+              <li>Подписки: {{ profile?.following_count ?? 0 }}</li>
+              <li>Уровень: {{ profile?.explorer_level || '—' }}</li>
             </ul>
           </div>
         </section>
       </div>
 
+        <p v-if="loadingProfile" class="status-note">Загружаем профиль...</p>
+        <p v-if="profileError" class="status-note error-note">{{ profileError }}</p>
+
       <div class="actions">
+        <button class="action-btn secondary" @click="goToSearch">Поиск людей и событий</button>
         <button class="action-btn secondary" @click="goToNft">Перейти в Мои NFT</button>
+        <button class="action-btn secondary" @click="goToFollowers">Мои подписчики</button>
+        <button class="action-btn secondary" @click="goToFollowing">Мои подписки</button>
         <button
           class="action-btn"
           :disabled="walletStore.isConnecting || !walletStore.isWalletInstalled"
@@ -125,41 +129,74 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { useWalletStore } from '../stores/wallet'
+import { apiService, type OwnProfile } from '@/services/api'
 
 const router = useRouter()
 const authStore = useAuthStore()
 const walletStore = useWalletStore()
 
-const profileMock = {
-  username: 'pyro',
-  firstName: 'Пиро',
-  lastName: 'Аманов',
-  city: 'Алматы',
-  email: 'pyro@example.com',
-  nftCount: 12,
-  visitedEvents: 27,
-  rareNftCount: 3,
-  levelProgress: 68,
-  achievements: ['Коллекционер недели', '10 посещенных концертов', 'Первый редкий NFT'],
-}
+const profile = ref<OwnProfile | null>(null)
+const loadingProfile = ref(false)
+const profileError = ref<string | null>(null)
 
 const formattedExpiry = computed(() => {
   if (!authStore.tokenExpiry) return 'Неизвестно'
   return authStore.tokenExpiry.toLocaleString('ru-RU')
 })
 
-const levelLabel = computed(() => {
-  if (profileMock.nftCount >= 20) return 'Легенда'
-  if (profileMock.nftCount >= 10) return 'Коллекционер'
-  return 'Новичок'
+const walletAddressPreview = computed(() => {
+  const address = profile.value?.external_wallet_address || profile.value?.wallet_address
+  if (!address) {
+    return walletStore.isConnected ? walletStore.truncatedAddress : '—'
+  }
+
+  return `${address.slice(0, 6)}...${address.slice(-4)}`
 })
+
+const progressPercent = computed(() => {
+  const points = profile.value?.explorer_points ?? 0
+  return Math.min(100, Math.max(0, points % 100))
+})
+
+const levelLabel = computed(() => {
+  const level = (profile.value?.explorer_level || '').toLowerCase()
+  if (level.includes('legend')) return 'Легенда'
+  if (level.includes('collector')) return 'Коллекционер'
+  if (profile.value?.nft_count && profile.value.nft_count >= 10) return 'Коллекционер'
+  return 'Исследователь'
+})
+
+const loadProfile = async () => {
+  loadingProfile.value = true
+  profileError.value = null
+
+  try {
+    profile.value = await apiService.getMyProfile()
+  } catch (error) {
+    profileError.value = error instanceof Error ? error.message : 'Не удалось загрузить профиль'
+  } finally {
+    loadingProfile.value = false
+  }
+}
 
 const goToNft = () => {
   router.push('/nft')
+}
+
+const goToSearch = () => {
+  router.push('/search')
+}
+
+const goToFollowers = () => {
+  router.push('/followers')
+}
+
+const goToFollowing = () => {
+  router.push('/following')
 }
 
 const handleWalletToggle = async () => {
@@ -177,6 +214,10 @@ const logout = async () => {
   authStore.logout()
   router.push('/login')
 }
+
+onMounted(() => {
+  loadProfile()
+})
 </script>
 
 <style scoped>
@@ -355,6 +396,15 @@ const logout = async () => {
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem;
+}
+
+.status-note {
+  margin-top: 0.9rem;
+  color: #4a5568;
+}
+
+.error-note {
+  color: #c53030;
 }
 
 .action-btn {

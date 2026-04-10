@@ -52,6 +52,35 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
+      path: '/users/:userId',
+      name: 'user-profile',
+      component: () => import('../views/UserProfileView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/users/:username/nfts',
+      name: 'user-nfts',
+      component: () => import('../views/UserNftsView.vue'),
+    },
+    {
+      path: '/search',
+      name: 'search',
+      component: () => import('../views/SearchView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/followers',
+      name: 'followers',
+      component: () => import('../views/SocialListView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/following',
+      name: 'following',
+      component: () => import('../views/SocialListView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
       path: '/login',
       name: 'login',
       component: () => import('../views/LoginView.vue'),

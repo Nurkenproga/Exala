@@ -1,6 +1,8 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { walletService, type WalletConnection } from '@/services/wallet'
+import { apiService } from '@/services/api'
+import { authService } from '@/services/auth'
 
 export const useWalletStore = defineStore('wallet', () => {
   const isConnected = ref(false)
@@ -10,6 +12,8 @@ export const useWalletStore = defineStore('wallet', () => {
   const isConnecting = ref(false)
   const error = ref<string | null>(null)
   const chainId = ref<number | null>(null)
+  const backendWalletAddress = ref<string>('')
+  const backendWalletType = ref<string>('')
 
   const truncatedAddress = computed(() => {
     if (!address.value) return ''
@@ -46,6 +50,24 @@ export const useWalletStore = defineStore('wallet', () => {
 
       localStorage.setItem('walletConnected', 'true')
       localStorage.setItem('walletAddress', connection.address)
+
+      if (authService.isAuthenticated() && window.ethereum) {
+        const message = 'Connect to Almaty Events'
+        const signature = await window.ethereum.request({
+          method: 'personal_sign',
+          params: [message, connection.address],
+        })
+
+        await apiService.connectExternalWallet({
+          wallet_address: connection.address,
+          signature,
+          message,
+        })
+      }
+
+      if (authService.isAuthenticated()) {
+        await syncWalletFromBackend()
+      }
 
       setupEventListeners()
     } catch (err: any) {
@@ -92,6 +114,10 @@ export const useWalletStore = defineStore('wallet', () => {
         }
 
         setupEventListeners()
+
+        if (authService.isAuthenticated()) {
+          await syncWalletFromBackend()
+        }
       }
     } catch (err) {
       console.error('Ошибка проверки соединения:', err)
@@ -121,10 +147,30 @@ export const useWalletStore = defineStore('wallet', () => {
     error.value = null
   }
 
+  const syncWalletFromBackend = async () => {
+    if (!authService.isAuthenticated()) {
+      backendWalletAddress.value = ''
+      backendWalletType.value = ''
+      return
+    }
+
+    try {
+      const wallet = await apiService.getMyWallet()
+      backendWalletAddress.value = wallet.wallet_address || ''
+      backendWalletType.value = wallet.wallet_type || ''
+    } catch (err: any) {
+      console.error('Ошибка синхронизации wallet с backend:', err)
+    }
+  }
+
   const init = async () => {
     const wasConnected = localStorage.getItem('walletConnected')
     if (wasConnected === 'true') {
       await checkConnection()
+    }
+
+    if (authService.isAuthenticated()) {
+      await syncWalletFromBackend()
     }
   }
 
@@ -136,12 +182,15 @@ export const useWalletStore = defineStore('wallet', () => {
     isConnecting,
     error,
     chainId,
+    backendWalletAddress,
+    backendWalletType,
     truncatedAddress,
     isWalletInstalled,
     connect,
     disconnect,
     checkConnection,
     clearError,
-    init
+    init,
+    syncWalletFromBackend
   }
 })

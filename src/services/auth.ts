@@ -5,6 +5,8 @@ export interface AuthCredentials {
 
 export interface LoginResponse {
   access_token: string
+  refresh_token: string
+  token_type?: string
 }
 
 export interface TokenPayload {
@@ -16,10 +18,12 @@ export interface TokenPayload {
 }
 
 const TOKEN_KEY = 'authToken'
+const REFRESH_TOKEN_KEY = 'refreshToken'
 
 class AuthService {
   private baseUrl: string = import.meta.env.VITE_AUTH_BASE_URL || 'http://localhost:8001'
   private useProxy: boolean = import.meta.env.DEV
+  private refreshPromise: Promise<LoginResponse> | null = null
 
   private getRequestUrl(endpoint: string): string {
     if (this.useProxy) {
@@ -31,10 +35,7 @@ class AuthService {
   private async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
     const response = await fetch(this.getRequestUrl(endpoint), {
       method: options?.method || 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(options?.headers || {}),
-      },
+      headers: options?.headers,
       body: options?.body,
     })
 
@@ -67,30 +68,81 @@ class AuthService {
     return response.json() as Promise<T>
   }
 
-  async register(credentials: AuthCredentials): Promise<unknown> {
+  private buildOAuth2Body(credentials: AuthCredentials): URLSearchParams {
+    const body = new URLSearchParams()
+    body.append('username', credentials.username)
+    body.append('password', credentials.password)
+    return body
+  }
+
+  async register(credentials: AuthCredentials): Promise<LoginResponse> {
+    const body = this.buildOAuth2Body(credentials)
     return this.request('/auth/register', {
       method: 'POST',
-      body: JSON.stringify(credentials),
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body,
     })
   }
 
   async login(credentials: AuthCredentials): Promise<LoginResponse> {
+    const body = this.buildOAuth2Body(credentials)
     return this.request<LoginResponse>('/auth/login', {
       method: 'POST',
-      body: JSON.stringify(credentials),
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body,
     })
+  }
+
+  async refreshTokens(refreshToken: string): Promise<LoginResponse> {
+    return this.request<LoginResponse>('/auth/refresh', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ refresh_token: refreshToken }),
+    })
+  }
+
+  async refreshAccessToken(): Promise<LoginResponse> {
+    const refreshToken = this.getRefreshToken()
+    if (!refreshToken) {
+      throw new Error('Refresh token отсутствует')
+    }
+
+    if (!this.refreshPromise) {
+      this.refreshPromise = this.refreshTokens(refreshToken)
+        .then((tokens) => {
+          this.setTokens(tokens.access_token, tokens.refresh_token)
+          return tokens
+        })
+        .finally(() => {
+          this.refreshPromise = null
+        })
+    }
+
+    return this.refreshPromise
   }
 
   getToken(): string | null {
     return localStorage.getItem(TOKEN_KEY)
   }
 
-  setToken(token: string): void {
-    localStorage.setItem(TOKEN_KEY, token)
+  getRefreshToken(): string | null {
+    return localStorage.getItem(REFRESH_TOKEN_KEY)
   }
 
-  clearToken(): void {
+  setTokens(accessToken: string, refreshToken: string): void {
+    localStorage.setItem(TOKEN_KEY, accessToken)
+    localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken)
+  }
+
+  clearTokens(): void {
     localStorage.removeItem(TOKEN_KEY)
+    localStorage.removeItem(REFRESH_TOKEN_KEY)
   }
 
   isAuthenticated(): boolean {

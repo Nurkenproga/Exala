@@ -13,24 +13,11 @@
           and Show Your NFT World
         </h1>
         <p class="hero-subtitle">
-          Подключите кошелек, просмотрите свою коллекцию и управляйте NFT в едином
-          интерфейсе.
+          Коллекция загружается из backend API. Внешний MetaMask-флоу временно отключен.
         </p>
 
         <div class="hero-actions">
-          <button
-            v-if="!walletStore.isConnected"
-            class="btn btn-primary"
-            @click="handleConnect"
-          >
-            Connect Wallet
-          </button>
-          <button
-            v-else
-            class="btn btn-primary"
-            :disabled="loading"
-            @click="loadNFTs"
-          >
+          <button class="btn btn-primary" :disabled="loading" @click="loadNFTs">
             {{ loading ? 'Refreshing...' : 'Refresh Collection' }}
           </button>
           <button class="btn btn-outline" @click="scrollToCollections">
@@ -79,17 +66,11 @@
     <section class="collections container" ref="collectionsSection">
       <div class="section-header">
         <h2>Top Collections</h2>
-        <p>Ваши NFT из подключенного кошелька</p>
+        <p>Ваши NFT из backend API</p>
         <p class="image-diagnostic" v-if="nfts.length > 0">Изображения: {{ nftsWithImage }} / {{ nfts.length }}</p>
       </div>
 
-      <div v-if="!walletStore.isConnected" class="state-card connect-state">
-        <h3>Подключите кошелек</h3>
-        <p>Чтобы увидеть NFT-коллекцию, подключите MetaMask и обновите страницу.</p>
-        <button class="btn btn-primary" @click="handleConnect">Подключить кошелек</button>
-      </div>
-
-      <div v-else-if="loading" class="nfts-grid">
+      <div v-if="loading" class="nfts-grid">
         <div v-for="skeleton in 8" :key="skeleton" class="nft-card skeleton-card">
           <div class="skeleton-media"></div>
           <div class="skeleton-line short"></div>
@@ -100,23 +81,13 @@
 
       <div v-else-if="error" class="state-card error-state">
         <p class="error-message">{{ error }}</p>
-        <div v-if="error.includes('API ключ')" class="api-key-info">
-          <p class="info-text">Для загрузки NFT через Alchemy нужен API ключ.</p>
-          <p class="info-text">
-            Получите его на
-            <a href="https://www.alchemy.com/" target="_blank" rel="noreferrer" class="info-link">
-              alchemy.com
-            </a>
-          </p>
-          <p class="info-text small">Переменная: VITE_ALCHEMY_API_KEY=ваш_ключ</p>
-        </div>
         <button class="btn btn-primary" @click="loadNFTs">Попробовать снова</button>
       </div>
 
       <div v-else-if="nfts.length > 0" class="nfts-grid">
         <article
           v-for="nft in nfts"
-          :key="`${nft.contract.address}-${nft.tokenId}`"
+          :key="`${nft.backendId}-${nft.tokenId}`"
           class="nft-card"
           @click="selectNFT(nft)"
         >
@@ -159,7 +130,7 @@
 
       <div v-else class="state-card empty-state">
         <h3>NFT не найдены</h3>
-        <p>В этой сети у подключенного кошелька пока нет NFT.</p>
+        <p>В вашей коллекции пока нет NFT.</p>
         <button class="btn btn-primary" @click="loadNFTs">Обновить</button>
       </div>
     </section>
@@ -217,15 +188,6 @@
               <button class="btn btn-primary" @click="setFeatured(selectedNft)">
                 {{ isFeaturedNft(selectedNft) ? 'Featured Selected' : 'Set as Featured' }}
               </button>
-              <a
-                v-if="selectedNft.tokenUri?.raw"
-                class="btn btn-outline"
-                :href="selectedNft.tokenUri.raw"
-                target="_blank"
-                rel="noreferrer"
-              >
-                Open Token URI
-              </a>
             </div>
 
             <div class="nft-modal-json">
@@ -259,19 +221,26 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useWalletStore } from '@/stores/wallet'
-import { nftService, type NFT } from '@/services/nft'
+import { apiService, type NftDetails, type NftListItem } from '@/services/api'
+import type { NFT } from '@/services/nft'
+
+type NFTViewItem = NFT & {
+  backendId: number
+  metadataUrl?: string | null
+  txHash?: string | null
+}
 
 const walletStore = useWalletStore()
-const { isConnected, address, chainId } = storeToRefs(walletStore)
+const { address, chainId } = storeToRefs(walletStore)
 
-const nfts = ref<NFT[]>([])
+const nfts = ref<NFTViewItem[]>([])
 const loading = ref(false)
 const error = ref<string | null>(null)
 const collectionsSection = ref<HTMLElement | null>(null)
-const selectedNft = ref<NFT | null>(null)
+const selectedNft = ref<NFTViewItem | null>(null)
 const featuredNftKey = ref<string | null>(null)
 
 const featuredStorageKey = computed(
@@ -307,85 +276,72 @@ const selectedMetadataJson = computed(() => {
   return JSON.stringify(selectedNft.value.metadata, null, 2)
 })
 
-const handleConnect = async () => {
-  try {
-    await walletStore.connect()
-    if (isConnected.value) {
-      await loadNFTs()
-    }
-  } catch (err) {
-    console.error('Ошибка подключения:', err)
+const buildNftDescription = (item: NftListItem) => {
+  const parts = [`Rarity: ${item.rarity}`, `Status: ${item.mint_status}`]
+  if (item.tx_hash) {
+    parts.push(`Tx: ${item.tx_hash.slice(0, 10)}...`)
+  }
+  return parts.join(' | ')
+}
+
+const mapBackendNft = (item: NftListItem): NFTViewItem => {
+  const contractAddress = '0x0000000000000000000000000000000000000000'
+  const tokenId = String(item.token_id_onchain ?? item.id)
+  const title = `NFT #${item.id}`
+
+  return {
+    backendId: item.id,
+    contract: {
+      address: contractAddress,
+      name: 'Almaty Events NFT',
+      symbol: 'AENFT',
+    },
+    tokenId,
+    title,
+    description: buildNftDescription(item),
+    tokenUri: {
+      raw: '',
+      gateway: item.image_url || '',
+    },
+    media: item.image_url
+      ? [
+          {
+            raw: item.image_url,
+            gateway: item.image_url,
+          },
+        ]
+      : [],
+    metadata: {
+      name: title,
+      description: buildNftDescription(item),
+      image: item.image_url || undefined,
+      attributes: [
+        { trait_type: 'rarity', value: item.rarity },
+        { trait_type: 'mint_status', value: item.mint_status },
+      ],
+    },
+    timeLastUpdated: item.minted_at || new Date().toISOString(),
+    txHash: item.tx_hash || null,
+    metadataUrl: null,
   }
 }
 
 const loadNFTs = async () => {
-  if (!isConnected.value || !address.value) {
-    error.value = 'Кошелек не подключен'
-    return
-  }
-
   loading.value = true
   error.value = null
 
   try {
-    const currentChainId = chainId.value || 1
-    const walletAddress = address.value
-
-    let fetchedNFTs: NFT[] = []
-    let alchemyError: string | null = null
-
-    if (currentChainId === 56 || currentChainId === 97) {
-      try {
-        fetchedNFTs = await nftService.getNFTsViaMoralis(walletAddress, currentChainId)
-      } catch (moralisErr: any) {
-        alchemyError = moralisErr.message
-      }
-    } else {
-      try {
-        fetchedNFTs = await nftService.getNFTs(walletAddress, currentChainId)
-      } catch (alchemyErr: any) {
-        alchemyError = alchemyErr.message
-
-        try {
-          fetchedNFTs = await nftService.getNFTsViaMoralis(walletAddress, currentChainId)
-        } catch (moralisErr: any) {
-          console.warn('Moralis fallback не сработал:', moralisErr.message)
-        }
-      }
-    }
-
-    nfts.value = fetchedNFTs
-
-    if (fetchedNFTs.length === 0) {
-      if (alchemyError) {
-        if (alchemyError.includes('API ключ') || alchemyError.includes('Требуется')) {
-          error.value = alchemyError
-        } else if (alchemyError.includes('Method name is invalid')) {
-          error.value = 'Ошибка формата запроса к Alchemy API. Проверьте консоль для деталей.'
-        } else if (currentChainId === 97 || currentChainId === 56) {
-          error.value =
-            'BSC не поддерживается Alchemy API. Переключитесь на Ethereum или Polygon для просмотра NFT.'
-        } else if (![1, 5, 137, 80001].includes(currentChainId)) {
-          error.value = `Сеть ${currentChainId} не поддерживается Alchemy API.`
-        } else {
-          error.value = `Ошибка загрузки NFT: ${alchemyError}`
-        }
-      } else {
-        error.value = null
-      }
-    } else {
-      error.value = null
-    }
+    const backendItems = await apiService.getMyNfts()
+    nfts.value = backendItems.map(mapBackendNft)
   } catch (err: any) {
-    console.error('Ошибка загрузки NFT:', err)
-    error.value = err.message || 'Не удалось загрузить NFT. Попробуйте позже.'
+    error.value = err?.message || 'Не удалось загрузить NFT. Попробуйте позже.'
     nfts.value = []
   } finally {
     loading.value = false
   }
 }
 
-const getNFTImage = (nft: NFT): string | undefined => {
+const getNFTImage = (nft: NFTViewItem): string | undefined => {
   if (nft.metadata?.image) {
     return processIPFSURL(nft.metadata.image) ?? undefined
   }
@@ -427,29 +383,6 @@ const processIPFSURL = (url: string | null | undefined): string | null => {
 
 const handleImageError = (event: Event) => {
   const img = event.target as HTMLImageElement
-  const originalSrc = img.src
-
-  if (originalSrc.includes('ipfs.io')) {
-    const alternativeGateways = [
-      'https://gateway.pinata.cloud/ipfs/',
-      'https://cloudflare-ipfs.com/ipfs/',
-      'https://dweb.link/ipfs/',
-    ]
-
-    const ipfsHash = originalSrc.split('/ipfs/')[1]
-    if (ipfsHash) {
-      const currentGatewayIndex = alternativeGateways.findIndex((gateway) =>
-        originalSrc.includes(gateway.replace('/ipfs/', '')),
-      )
-      const nextGatewayIndex = currentGatewayIndex + 1
-
-      if (nextGatewayIndex < alternativeGateways.length) {
-        img.src = `${alternativeGateways[nextGatewayIndex]}${ipfsHash}`
-        return
-      }
-    }
-  }
-
   img.style.display = 'none'
   const parent = img.parentElement
   if (parent) {
@@ -472,9 +405,9 @@ const truncateAddress = (walletAddress: string): string => {
   return `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`
 }
 
-const getNftKey = (nft: NFT): string => `${nft.contract.address}-${nft.tokenId}`
+const getNftKey = (nft: NFTViewItem): string => `${nft.backendId}-${nft.tokenId}`
 
-const isFeaturedNft = (nft: NFT): boolean => {
+const isFeaturedNft = (nft: NFTViewItem): boolean => {
   if (!featuredNft.value) {
     return false
   }
@@ -482,7 +415,7 @@ const isFeaturedNft = (nft: NFT): boolean => {
   return getNftKey(featuredNft.value) === getNftKey(nft)
 }
 
-const setFeatured = (nft: NFT) => {
+const setFeatured = (nft: NFTViewItem) => {
   const key = getNftKey(nft)
   featuredNftKey.value = key
   localStorage.setItem(featuredStorageKey.value, key)
@@ -509,38 +442,70 @@ const scrollToCollections = () => {
   collectionsSection.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
-const selectNFT = (nft: NFT) => {
+const selectNFT = async (nft: NFTViewItem) => {
   selectedNft.value = nft
+  try {
+    const details: NftDetails = await apiService.getNftDetails(nft.backendId)
+
+    let remoteMetadata: {
+      name?: string
+      description?: string
+      image?: string
+      attributes?: Array<{ trait_type: string; value: string | number }>
+    } | null = null
+
+    if (details.metadata_url) {
+      try {
+        const response = await fetch(details.metadata_url)
+        if (response.ok) {
+          remoteMetadata = await response.json()
+        }
+      } catch {
+        // keep fallback metadata when remote metadata URL is unavailable
+      }
+    }
+
+    const mergedAttributes =
+      remoteMetadata?.attributes && remoteMetadata.attributes.length > 0
+        ? remoteMetadata.attributes
+        : [
+            { trait_type: 'rarity', value: details.rarity },
+            { trait_type: 'mint_status', value: details.mint_status },
+            { trait_type: 'points', value: details.points_value },
+          ]
+
+    const mergedName = remoteMetadata?.name || nft.metadata?.name || `NFT #${details.id}`
+    const mergedDescription =
+      remoteMetadata?.description || `Rarity: ${details.rarity} | Status: ${details.mint_status}`
+    const mergedImage = remoteMetadata?.image || details.image_url || nft.metadata?.image
+
+    selectedNft.value = {
+      ...nft,
+      tokenId: String(details.token_id_onchain ?? nft.tokenId),
+      title: mergedName,
+      description: mergedDescription,
+      txHash: details.tx_hash || null,
+      metadataUrl: details.metadata_url || null,
+      contract: {
+        ...nft.contract,
+        address: details.contract_address || nft.contract.address,
+      },
+      timeLastUpdated: details.minted_at || nft.timeLastUpdated,
+      metadata: {
+        name: mergedName,
+        description: mergedDescription,
+        image: mergedImage || undefined,
+        attributes: mergedAttributes,
+      },
+    }
+  } catch {
+    // keep already selected basic card data if details request fails
+  }
 }
 
 onMounted(() => {
   featuredNftKey.value = localStorage.getItem(featuredStorageKey.value)
-
-  if (isConnected.value && address.value) {
-    loadNFTs()
-  }
-})
-
-watch([isConnected, address], ([connected, walletAddress]) => {
-  featuredNftKey.value = localStorage.getItem(featuredStorageKey.value)
-
-  if (connected && walletAddress) {
-    loadNFTs()
-  } else {
-    nfts.value = []
-    selectedNft.value = null
-    error.value = null
-  }
-})
-
-watch(nfts, (nextNfts) => {
-  if (!selectedNft.value) {
-    return
-  }
-
-  const key = getNftKey(selectedNft.value)
-  const nextSelected = nextNfts.find((nft) => getNftKey(nft) === key)
-  selectedNft.value = nextSelected || null
+  loadNFTs()
 })
 </script>
 
@@ -924,7 +889,6 @@ watch(nfts, (nextNfts) => {
   background: rgba(10, 14, 28, 0.9);
 }
 
-.connect-state,
 .empty-state {
   text-align: center;
 }
@@ -937,27 +901,6 @@ watch(nfts, (nextNfts) => {
 .error-message {
   color: #ff8a9e;
   font-weight: 600;
-}
-
-.api-key-info {
-  margin: 1rem 0 1.2rem;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
-  padding: 0.95rem;
-  background: rgba(255, 255, 255, 0.02);
-}
-
-.info-text {
-  color: #c4cdec;
-  margin-top: 0.2rem;
-}
-
-.info-text.small {
-  font-size: 0.8rem;
-}
-
-.info-link {
-  color: #94bcff;
 }
 
 .skeleton-card {
