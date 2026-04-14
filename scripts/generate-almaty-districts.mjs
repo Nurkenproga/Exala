@@ -2,7 +2,7 @@ import fs from 'node:fs/promises'
 import osmtogeojson from 'osmtogeojson'
 
 const OVERPASS_URL = 'https://overpass.kumi.systems/api/interpreter'
-const USER_AGENT = 'ExalaMapGenerator/1.0 (student project contact: local)'
+const USER_AGENT = 'VibeChainMapGenerator/1.0 (student project contact: local)'
 
 const DISTRICTS = [
   { relationId: 3072807, name: 'Алмалинский', slug: 'almaly', color: '#9f6bff' },

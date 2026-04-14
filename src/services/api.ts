@@ -100,6 +100,15 @@ export interface UserShort {
   username: string
 }
 
+export interface LeaderboardEntry {
+  id: number | null
+  username: string
+  explorer_points: number
+  explorer_level?: string
+  nft_count?: number
+  events_attended?: number
+}
+
 export interface EventSearchItem {
   id: number
   type: 'movie' | 'concert' | 'theatre' | 'standup'
@@ -151,8 +160,13 @@ export interface NftListItem {
 export interface NftDetails extends NftListItem {
   contract_address: string | null
   chain_id: number | null
+  network_name?: string | null
   metadata_url: string | null
+  etherscan_url?: string | null
   points_value: number
+  event_title?: string | null
+  event_date?: string | null
+  category_name?: string | null
 }
 
 export interface WalletInfo {
@@ -169,6 +183,15 @@ export interface ConnectExternalWalletRequest {
 export interface ConnectExternalWalletResponse {
   message: string
   wallet_address: string
+}
+
+export type EventTypeName = 'movie' | 'concert' | 'theatre' | 'standup'
+
+export interface BuyTicketResponse {
+  buy_ticket_url?: string
+  url?: string
+  link?: string
+  [key: string]: unknown
 }
 
 class ApiService {
@@ -230,7 +253,21 @@ class ApiService {
       if (!response.ok) {
         const errorText = await response.text()
         console.error('API Error:', response.status, errorText)
-        throw new Error(`API error: ${response.status} - ${response.statusText}`)
+
+        const statusMessages: Record<number, string> = {
+          400: 'Запрос не удалось обработать. Проверьте введенные данные.',
+          403: 'Недостаточно прав для выполнения действия.',
+          404: 'Данные не найдены.',
+          409: 'Конфликт данных. Попробуйте обновить страницу.',
+          422: 'Некорректные данные запроса.',
+          429: 'Слишком много запросов. Попробуйте позже.',
+          500: 'Временная ошибка сервера. Попробуйте позже.',
+          502: 'Сервис временно недоступен. Попробуйте позже.',
+          503: 'Сервис временно недоступен. Попробуйте позже.',
+          504: 'Сервис отвечает слишком долго. Попробуйте позже.',
+        }
+
+        throw new Error(statusMessages[response.status] || 'Произошла ошибка. Попробуйте снова.')
       }
 
       const data = await response.json()
@@ -259,12 +296,40 @@ class ApiService {
     return this.request<Concert[]>('/concerts/')
   }
 
+  async getConcertById(id: number): Promise<Concert> {
+    return this.request<Concert>(`/concerts/${id}`)
+  }
+
   async getTheatre(): Promise<TheatreEvent[]> {
     return this.request<TheatreEvent[]>('/theatre/')
   }
 
+  async getTheatreById(id: number): Promise<TheatreEvent> {
+    return this.request<TheatreEvent>(`/theatre/${id}`)
+  }
+
   async getStandups(): Promise<StandupEvent[]> {
     return this.request<StandupEvent[]>('/standups/')
+  }
+
+  async getStandupById(id: number): Promise<StandupEvent> {
+    return this.request<StandupEvent>(`/standups/${id}`)
+  }
+
+  async buyMovieTicket(id: number): Promise<BuyTicketResponse> {
+    return this.request<BuyTicketResponse>(`/movies/${id}/buy-ticket`)
+  }
+
+  async buyConcertTicket(id: number): Promise<BuyTicketResponse> {
+    return this.request<BuyTicketResponse>(`/concerts/${id}/buy-ticket`)
+  }
+
+  async buyTheatreTicket(id: number): Promise<BuyTicketResponse> {
+    return this.request<BuyTicketResponse>(`/theatre/${id}/buy-ticket`)
+  }
+
+  async buyStandupTicket(id: number): Promise<BuyTicketResponse> {
+    return this.request<BuyTicketResponse>(`/standups/${id}/buy-ticket`)
   }
 
   async getMyProfile(): Promise<OwnProfile> {
@@ -279,6 +344,54 @@ class ApiService {
     const query = new URLSearchParams({ username })
     const response = await this.request<{ users: UserShort[] }>(`/users/search?${query.toString()}`)
     return response.users || []
+  }
+
+  async getLeaderboard(limit = 10): Promise<LeaderboardEntry[]> {
+    const query = new URLSearchParams({ limit: String(limit) })
+    const response = await this.request<
+      Array<Record<string, unknown>> |
+      {
+        leaderboard?: Array<Record<string, unknown>>
+        users?: Array<Record<string, unknown>>
+        items?: Array<Record<string, unknown>>
+      }
+    >(`/users/leaderboard?${query.toString()}`)
+
+    const list = Array.isArray(response)
+      ? response
+      : response.leaderboard || response.users || response.items || []
+
+    return list.map<LeaderboardEntry>((item) => {
+      const rawId = item.id ?? item.user_id ?? null
+      const parsedId =
+        typeof rawId === 'number'
+          ? rawId
+          : typeof rawId === 'string' && rawId.trim()
+            ? Number(rawId)
+            : null
+
+      const explorerPointsRaw = item.explorer_points ?? 0
+      const explorerPoints =
+        typeof explorerPointsRaw === 'number'
+          ? explorerPointsRaw
+          : Number(explorerPointsRaw) || 0
+
+      const nftCountRaw = item.nft_count
+      const eventsAttendedRaw = item.events_attended
+
+      return {
+        id: Number.isFinite(parsedId as number) ? (parsedId as number) : null,
+        username: String(item.username || 'unknown'),
+        explorer_points: explorerPoints,
+        explorer_level: item.explorer_level ? String(item.explorer_level) : undefined,
+        nft_count:
+          nftCountRaw === undefined || nftCountRaw === null ? undefined : Number(nftCountRaw) || 0,
+        events_attended:
+          eventsAttendedRaw === undefined || eventsAttendedRaw === null
+            ? undefined
+            : Number(eventsAttendedRaw) || 0,
+      }
+    })
   }
 
   async getMyFollowers(): Promise<UserShort[]> {
@@ -410,11 +523,16 @@ class ApiService {
   }
 
   async getMyWallet(): Promise<WalletInfo> {
-    return this.request<WalletInfo>('/wallet/my')
+    const me = await this.getMyProfile()
+    const query = new URLSearchParams({ current_user_id: String(me.id) })
+    return this.request<WalletInfo>(`/wallet/my?${query.toString()}`)
   }
 
   async connectExternalWallet(payload: ConnectExternalWalletRequest): Promise<ConnectExternalWalletResponse> {
-    return this.request<ConnectExternalWalletResponse>('/wallet/connect-external', {
+    const me = await this.getMyProfile()
+    const query = new URLSearchParams({ current_user_id: String(me.id) })
+
+    return this.request<ConnectExternalWalletResponse>(`/wallet/connect-external?${query.toString()}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

@@ -1,4 +1,4 @@
-# Exala
+# VibeChain
 
 Платформа событий в Алматы: афиша кино, концертов, театра и стендапов в одном месте.
 
@@ -48,8 +48,8 @@
 
 ```bash
 # Клонировать репозиторий
-git clone https://github.com/ваш-username/exala.git
-cd exala
+git clone https://github.com/ваш-username/vibechain.git
+cd vibechain
 
 # Установить зависимости
 npm install

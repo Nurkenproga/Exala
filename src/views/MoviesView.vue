@@ -99,10 +99,12 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useMoviesStore } from '@/stores/movies'
 import type { Movie } from '@/services/api'
 
 const moviesStore = useMoviesStore()
+const router = useRouter()
 const filter = ref<'all' | 'upcoming' | 'pre_sales'>('all')
 
 const filteredMovies = computed(() => {
@@ -152,9 +154,7 @@ const handleImageError = (event: Event) => {
 
 const selectMovie = (movie: Movie) => {
   moviesStore.selectMovie(movie)
-  if (movie.movie_url) {
-    window.open(movie.movie_url, '_blank')
-  }
+  router.push(`/events/movie/${movie.id}`)
 }
 
 onMounted(() => {

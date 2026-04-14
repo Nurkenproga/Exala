@@ -32,6 +32,27 @@ body {
   -moz-osx-font-smoothing: grayscale;
   margin: 0;
   padding: 0;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(125, 77, 255, 0.7) rgba(9, 13, 28, 0.75);
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: rgba(9, 13, 28, 0.78);
+}
+
+*::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(125, 77, 255, 0.9), rgba(79, 157, 255, 0.86));
+  border-radius: 999px;
+  border: 2px solid rgba(9, 13, 28, 0.75);
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, rgba(143, 97, 255, 0.96), rgba(96, 172, 255, 0.92));
 }
 
 a {

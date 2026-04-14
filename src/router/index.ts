@@ -1,5 +1,4 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import EventsView from '../views/EventsView.vue'
 import { authService } from '@/services/auth'
 
 const router = createRouter({
@@ -7,12 +6,12 @@ const router = createRouter({
   routes: [
     {
       path: '/',
-      redirect: '/events'
+      redirect: () => (authService.isAuthenticated() ? '/profile' : '/register')
     },
     {
-      path: '/events',
-      name: 'events',
-      component: EventsView,
+      path: '/events/:type/:id',
+      name: 'event-detail',
+      component: () => import('../views/EventDetailView.vue'),
     },
     {
       path: '/movies',
@@ -66,18 +65,23 @@ const router = createRouter({
       path: '/search',
       name: 'search',
       component: () => import('../views/SearchView.vue'),
+    },
+    {
+      path: '/community',
+      name: 'community',
+      component: () => import('../views/SocialHubView.vue'),
       meta: { requiresAuth: true },
     },
     {
       path: '/followers',
       name: 'followers',
-      component: () => import('../views/SocialListView.vue'),
+      redirect: '/community?tab=followers',
       meta: { requiresAuth: true },
     },
     {
       path: '/following',
       name: 'following',
-      component: () => import('../views/SocialListView.vue'),
+      redirect: '/community?tab=following',
       meta: { requiresAuth: true },
     },
     {
@@ -103,7 +107,7 @@ router.beforeEach((to) => {
   }
 
   if (to.meta.guestOnly && isAuth) {
-    return { name: 'events' }
+    return { name: 'profile' }
   }
 
   return true

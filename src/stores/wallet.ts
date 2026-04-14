@@ -51,25 +51,29 @@ export const useWalletStore = defineStore('wallet', () => {
       localStorage.setItem('walletConnected', 'true')
       localStorage.setItem('walletAddress', connection.address)
 
-      if (authService.isAuthenticated() && window.ethereum) {
-        const message = 'Connect to Almaty Events'
-        const signature = await window.ethereum.request({
-          method: 'personal_sign',
-          params: [message, connection.address],
-        })
+      setupEventListeners()
 
-        await apiService.connectExternalWallet({
-          wallet_address: connection.address,
-          signature,
-          message,
-        })
+      if (authService.isAuthenticated() && window.ethereum) {
+        try {
+          const message = `Connect to VibeChain\nAddress: ${connection.address}`
+          const signature = await connection.signer.signMessage(message)
+
+          await apiService.connectExternalWallet({
+            wallet_address: connection.address,
+            signature,
+            message,
+          })
+        } catch (backendError: any) {
+          // Current backend signature verification can fail (400 Invalid signature).
+          // Keep MetaMask connected locally so user can continue using wallet features.
+          console.error('Ошибка привязки external wallet на backend:', backendError)
+          error.value = 'MetaMask подключен, но backend пока не подтвердил подпись (временное ограничение сервера).'
+        }
       }
 
       if (authService.isAuthenticated()) {
         await syncWalletFromBackend()
       }
-
-      setupEventListeners()
     } catch (err: any) {
       error.value = err.message || 'Ошибка подключения кошелька'
       isConnected.value = false

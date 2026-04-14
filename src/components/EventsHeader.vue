@@ -2,9 +2,17 @@
   <header class="events-header">
     <div class="header-container">
       <div class="logo-section">
-        <RouterLink to="/events" class="logo-link">
+        <RouterLink :to="homeLink" class="logo-link">
+          <img
+            v-if="!logoLoadError"
+            src="/vibechain-logo.svg"
+            alt="VibeChain"
+            class="logo-image"
+            @error="logoLoadError = true"
+          />
+          <div v-else class="logo-fallback" aria-hidden="true">V</div>
           <div class="logo-text-wrapper">
-            <h1 class="logo-text">Exala</h1>
+            <h1 class="logo-text">VibeChain</h1>
             <span class="logo-subtitle">События Алматы</span>
           </div>
         </RouterLink>
@@ -12,19 +20,11 @@
 
       <nav class="main-nav">
         <RouterLink 
-          to="/events" 
-          class="nav-link" 
-          active-class="active"
-          exact-active-class="active"
-        >
-          События
-        </RouterLink>
-        <RouterLink 
           to="/movies" 
           class="nav-link" 
           active-class="active"
         >
-          Movies
+          Фильмы
         </RouterLink>
         <RouterLink
           to="/map"
@@ -38,21 +38,21 @@
           class="nav-link" 
           active-class="active"
         >
-          Concerts
+          Концерты
         </RouterLink>
         <RouterLink 
           to="/theatre" 
           class="nav-link" 
           active-class="active"
         >
-          Theatre
+          Театр
         </RouterLink>
         <RouterLink 
           to="/standups" 
           class="nav-link" 
           active-class="active"
         >
-          Standups
+          Стендапы
         </RouterLink>
         <RouterLink
           v-if="isAuthenticated"
@@ -73,17 +73,20 @@
       </nav>
 
       <div class="header-actions">
+        <form class="event-search" @submit.prevent="submitEventSearch">
+          <input
+            v-model.trim="eventQuery"
+            type="text"
+            class="event-search-input"
+            placeholder="Поиск события..."
+          />
+          <button type="submit" class="event-search-btn">Найти</button>
+        </form>
+
         <div v-if="!isAuthenticated" class="auth-links">
           <RouterLink to="/login" class="auth-link">Войти</RouterLink>
           <RouterLink to="/register" class="auth-link auth-link-primary">Регистрация</RouterLink>
         </div>
-        <button
-          v-if="isAuthenticated"
-          class="auth-btn"
-          @click="handleLogout"
-        >
-          Выйти
-        </button>
         <button 
           class="connect-wallet-btn" 
           :class="{ 'connected': isConnected, 'connecting': isConnecting }"
@@ -110,16 +113,19 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue'
-import { RouterLink } from 'vue-router'
+import { computed, onMounted, ref } from 'vue'
+import { RouterLink, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useWalletStore } from '../stores/wallet'
 import { useAuthStore } from '../stores/auth'
 
+const router = useRouter()
 const walletStore = useWalletStore()
 const { isConnected, isConnecting, truncatedAddress, isWalletInstalled, error } = storeToRefs(walletStore)
-const authStore = useAuthStore()
-const { isAuthenticated } = storeToRefs(authStore)
+const { isAuthenticated } = storeToRefs(useAuthStore())
+const homeLink = computed(() => (isAuthenticated.value ? '/profile' : '/register'))
+const eventQuery = ref('')
+const logoLoadError = ref(false)
 
 const handleConnectWallet = async () => {
   if (!isAuthenticated.value) {
@@ -132,6 +138,9 @@ const handleConnectWallet = async () => {
       await walletStore.disconnect()
     } else {
       await walletStore.connect()
+      if (error.value) {
+        alert(error.value)
+      }
     }
   } catch (err: any) {
     console.error('Ошибка подключения кошелька:', err)
@@ -140,8 +149,13 @@ const handleConnectWallet = async () => {
   }
 }
 
-const handleLogout = () => {
-  authStore.logout()
+const submitEventSearch = () => {
+  const value = eventQuery.value.trim()
+  if (!value) {
+    router.push('/search')
+    return
+  }
+  router.push({ path: '/search', query: { q: value } })
 }
 
 onMounted(() => {
@@ -165,13 +179,13 @@ onMounted(() => {
 }
 
 .header-container {
-  width: min(1240px, 92vw);
+  width: min(1420px, 96vw);
   margin: 0 auto;
-  padding: 0.9rem 0;
+  padding: 0.78rem 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
+  gap: 0.8rem;
 }
 
 .logo-section {
@@ -179,6 +193,9 @@ onMounted(() => {
 }
 
 .logo-link {
+  display: flex;
+  align-items: center;
+  gap: 0.62rem;
   text-decoration: none;
   color: #f3f6ff;
   transition: transform 0.2s, opacity 0.2s;
@@ -192,6 +209,32 @@ onMounted(() => {
 .logo-text-wrapper {
   display: flex;
   flex-direction: column;
+}
+
+.logo-image {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  object-fit: cover;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.38);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+}
+
+.logo-fallback {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 1.05rem;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  background:
+    radial-gradient(circle at 26% 20%, rgba(245, 93, 212, 0.88), transparent 55%),
+    radial-gradient(circle at 80% 84%, rgba(255, 171, 56, 0.9), transparent 55%),
+    linear-gradient(145deg, #41145e 0%, #120c34 75%);
 }
 
 .logo-text {
@@ -213,13 +256,13 @@ onMounted(() => {
 
 .main-nav {
   display: flex;
-  gap: 0.28rem;
+  gap: 0.2rem;
   flex: 1;
   justify-content: center;
   align-items: center;
   flex-wrap: nowrap;
   min-width: 0;
-  overflow-x: auto;
+  overflow: hidden;
   scrollbar-width: none;
 }
 
@@ -231,7 +274,7 @@ onMounted(() => {
   color: #d6defd;
   text-decoration: none;
   font-weight: 600;
-  padding: 0.46rem 0.78rem;
+  padding: 0.44rem 0.66rem;
   border-radius: 999px;
   transition: all 0.2s ease;
   display: flex;
@@ -256,8 +299,46 @@ onMounted(() => {
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 0.55rem;
+  gap: 0.45rem;
   flex-shrink: 0;
+}
+
+.event-search {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  border: 1px solid rgba(164, 178, 237, 0.3);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 0.22rem;
+}
+
+.event-search-input {
+  width: 146px;
+  border: none;
+  background: transparent;
+  color: #eef3ff;
+  padding: 0.42rem 0.62rem;
+  font-size: 0.8rem;
+}
+
+.event-search-input::placeholder {
+  color: #9aabda;
+}
+
+.event-search-input:focus {
+  outline: none;
+}
+
+.event-search-btn {
+  border: none;
+  border-radius: 999px;
+  background: linear-gradient(120deg, rgba(125, 77, 255, 0.95), rgba(81, 95, 255, 0.95));
+  color: #fff;
+  padding: 0.42rem 0.72rem;
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
 }
 
 .auth-links {
@@ -284,22 +365,6 @@ onMounted(() => {
 .auth-link-primary {
   background: linear-gradient(120deg, rgba(125, 77, 255, 0.95), rgba(81, 95, 255, 0.95));
   border-color: transparent;
-}
-
-.auth-btn {
-  background: rgba(255, 255, 255, 0.08);
-  color: #ebefff;
-  border: 1px solid rgba(164, 178, 237, 0.35);
-  padding: 0.48rem 0.82rem;
-  border-radius: 999px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s ease;
-  font-size: 0.8rem;
-}
-
-.auth-btn:hover {
-  background: rgba(255, 255, 255, 0.14);
 }
 
 .connect-wallet-btn {
@@ -362,26 +427,58 @@ onMounted(() => {
   white-space: nowrap;
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 1280px) {
   .header-container {
     width: min(1240px, 94vw);
-    padding: 0.8rem 0;
-    gap: 0.7rem;
+    gap: 0.6rem;
   }
 
   .logo-text {
     font-size: 1.55rem;
   }
 
+  .logo-image,
+  .logo-fallback {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+  }
+
   .nav-link {
     font-size: 0.78rem;
-    padding: 0.42rem 0.62rem;
+    padding: 0.4rem 0.58rem;
+  }
+
+  .event-search-input {
+    width: 120px;
   }
 
   .auth-link,
-  .auth-btn,
   .connect-wallet-btn {
     font-size: 0.74rem;
+  }
+}
+
+@media (max-width: 1120px) {
+  .header-container {
+    width: min(1240px, 95vw);
+    padding: 0.72rem 0;
+    flex-wrap: wrap;
+    row-gap: 0.58rem;
+  }
+
+  .main-nav {
+    order: 3;
+    width: 100%;
+    justify-content: flex-start;
+    overflow-x: auto;
+    margin-top: 0.12rem;
+    padding-top: 0.45rem;
+    border-top: 1px solid rgba(164, 178, 237, 0.2);
+  }
+
+  .header-actions {
+    margin-left: auto;
   }
 }
 
@@ -395,6 +492,13 @@ onMounted(() => {
 
   .logo-text {
     font-size: 1.35rem;
+  }
+
+  .logo-image,
+  .logo-fallback {
+    width: 32px;
+    height: 32px;
+    border-radius: 9px;
   }
 
   .logo-subtitle {
@@ -422,6 +526,15 @@ onMounted(() => {
     display: none;
   }
 
+  .event-search {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .event-search-input {
+    width: 100%;
+  }
+
   .wallet-badge {
     font-size: 0.7rem;
     padding: 0.2rem 0.5rem;
@@ -436,6 +549,13 @@ onMounted(() => {
 
   .logo-text-wrapper {
     display: flex;
+  }
+
+  .logo-image,
+  .logo-fallback {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
   }
 
   .logo-subtitle {

@@ -5,38 +5,34 @@
 
     <section class="hero-section container">
       <div class="hero-copy">
-        <p class="eyebrow">Exala NFT</p>
+        <p class="eyebrow">VibeChain NFT</p>
         <h1 class="hero-title">
-          Discover,
-          <span>Collect</span>
+          Открывай,
+          <span>Собирай</span>
           <br />
-          and Show Your NFT World
+          и Показывай Свой NFT Мир
         </h1>
         <p class="hero-subtitle">
-          Коллекция загружается из backend API. Внешний MetaMask-флоу временно отключен.
+          Ваша NFT-коллекция в одном месте.
         </p>
 
         <div class="hero-actions">
           <button class="btn btn-primary" :disabled="loading" @click="loadNFTs">
-            {{ loading ? 'Refreshing...' : 'Refresh Collection' }}
+            {{ loading ? 'Обновляем...' : 'Обновить коллекцию' }}
           </button>
           <button class="btn btn-outline" @click="scrollToCollections">
-            View Collection
+            Смотреть коллекцию
           </button>
         </div>
 
         <div class="hero-stats">
           <div class="stat-item">
+            <p class="stat-label">Всего NFT</p>
             <p class="stat-value">{{ nfts.length }}</p>
-            <p class="stat-label">NFT Items</p>
           </div>
           <div class="stat-item">
-            <p class="stat-value">{{ uniqueCollections }}</p>
-            <p class="stat-label">Collections</p>
-          </div>
-          <div class="stat-item">
-            <p class="stat-value">{{ totalTraits }}</p>
-            <p class="stat-label">Traits</p>
+            <p class="stat-label">С изображением</p>
+            <p class="stat-value">{{ nftsWithImage }}</p>
           </div>
         </div>
       </div>
@@ -54,10 +50,10 @@
         </div>
 
         <div class="eth-chip">
-          <p class="chip-label">Featured NFT</p>
-          <p class="chip-name">{{ featuredNft?.title || featuredNft?.metadata?.name || 'Not selected' }}</p>
+          <p class="chip-label">Избранный NFT</p>
+          <p class="chip-name">{{ featuredNft?.title || featuredNft?.metadata?.name || 'Не выбран' }}</p>
           <p class="chip-value">
-            {{ featuredNft ? truncateAddress(featuredNft.contract.address) : 'No data yet' }}
+            {{ featuredNft ? displayContract(featuredNft.contract.address) : 'Нет данных' }}
           </p>
         </div>
       </div>
@@ -65,9 +61,8 @@
 
     <section class="collections container" ref="collectionsSection">
       <div class="section-header">
-        <h2>Top Collections</h2>
-        <p>Ваши NFT из backend API</p>
-        <p class="image-diagnostic" v-if="nfts.length > 0">Изображения: {{ nftsWithImage }} / {{ nfts.length }}</p>
+        <h2>Моя NFT-лента</h2>
+        <p>Все ваши NFT в удобном формате карточек.</p>
       </div>
 
       <div v-if="loading" class="nfts-grid">
@@ -92,7 +87,7 @@
           @click="selectNFT(nft)"
         >
           <div class="nft-media">
-            <div v-if="isFeaturedNft(nft)" class="featured-badge">Featured</div>
+            <div v-if="isFeaturedNft(nft)" class="featured-badge">Избранное</div>
             <div class="nft-placeholder">NFT</div>
             <img
               v-if="getNFTImage(nft)"
@@ -105,9 +100,9 @@
 
           <div class="nft-content">
             <h3 class="nft-name">{{ nft.title || nft.metadata?.name || `#${nft.tokenId}` }}</h3>
-            <p class="nft-collection">{{ nft.contract.name || 'Unknown Collection' }}</p>
+            <p class="nft-collection">{{ nft.contract.name || 'Неизвестная коллекция' }}</p>
             <p class="nft-description">
-              {{ truncateText(nft.description || nft.metadata?.description || 'No description', 92) }}
+              {{ truncateText(nft.description || nft.metadata?.description || 'Описание отсутствует', 92) }}
             </p>
 
             <div class="nft-tags" v-if="nft.metadata?.attributes && nft.metadata.attributes.length > 0">
@@ -121,7 +116,7 @@
             </div>
 
             <footer class="nft-footer">
-              <span>{{ truncateAddress(nft.contract.address) }}</span>
+              <span>{{ displayContract(nft.contract.address) }}</span>
               <span>#{{ nft.tokenId }}</span>
             </footer>
           </div>
@@ -139,10 +134,10 @@
       <section class="nft-modal" @click.stop>
         <header class="nft-modal-header">
           <div>
-            <p class="nft-modal-eyebrow">NFT Details</p>
+            <p class="nft-modal-eyebrow">Детали NFT</p>
             <h3>{{ selectedNft.title || selectedNft.metadata?.name || `#${selectedNft.tokenId}` }}</h3>
           </div>
-          <button class="modal-close" @click="closeNftDetails">Close</button>
+          <button class="modal-close" @click="closeNftDetails">Закрыть</button>
         </header>
 
         <div class="nft-modal-body">
@@ -158,20 +153,20 @@
           </div>
 
           <div class="nft-modal-info">
-            <p><span>Collection:</span> {{ selectedNft.contract.name || 'Unknown' }}</p>
-            <p><span>Contract:</span> {{ selectedNft.contract.address }}</p>
-            <p><span>Token ID:</span> {{ selectedNft.tokenId }}</p>
-            <p><span>Last Update:</span> {{ formatDate(selectedNft.timeLastUpdated) }}</p>
+            <p><span>Коллекция:</span> {{ selectedNft.contract.name || 'Неизвестно' }}</p>
+            <p><span>Контракт / Tx:</span> {{ displayContract(selectedNft.contract.address) }}</p>
+            <p><span>Токен ID:</span> {{ selectedNft.tokenId }}</p>
+            <p><span>Последнее обновление:</span> {{ formatDate(selectedNft.timeLastUpdated) }}</p>
             <p>
-              <span>Description:</span>
-              {{ selectedNft.description || selectedNft.metadata?.description || 'No description' }}
+              <span>Описание:</span>
+              {{ selectedNft.description || selectedNft.metadata?.description || 'Описание отсутствует' }}
             </p>
 
             <div
               v-if="selectedNft.metadata?.attributes && selectedNft.metadata.attributes.length > 0"
               class="nft-modal-traits"
             >
-              <p class="modal-subtitle">Attributes</p>
+              <p class="modal-subtitle">Атрибуты</p>
               <div class="modal-traits-grid">
                 <div
                   v-for="(attr, index) in selectedNft.metadata.attributes"
@@ -186,12 +181,15 @@
 
             <div class="nft-modal-actions">
               <button class="btn btn-primary" @click="setFeatured(selectedNft)">
-                {{ isFeaturedNft(selectedNft) ? 'Featured Selected' : 'Set as Featured' }}
+                {{ isFeaturedNft(selectedNft) ? 'Уже в избранном' : 'Сделать избранным' }}
+              </button>
+              <button class="btn btn-outline" @click="showMetadataJson = !showMetadataJson">
+                {{ showMetadataJson ? 'Скрыть метаданные JSON' : 'Показать метаданные JSON' }}
               </button>
             </div>
 
-            <div class="nft-modal-json">
-              <p class="modal-subtitle">Metadata JSON</p>
+            <div v-if="showMetadataJson" class="nft-modal-json">
+              <p class="modal-subtitle">Метаданные JSON</p>
               <pre>{{ selectedMetadataJson }}</pre>
             </div>
           </div>
@@ -201,20 +199,20 @@
 
     <footer class="page-footer container">
       <div class="footer-brand">
-        <h3>Exala Art</h3>
-        <p>The NFT space for creators, collectors and web3 communities.</p>
+        <h3>VibeChain NFT</h3>
+        <p>Пространство NFT для коллекционеров и комьюнити.</p>
       </div>
       <div class="footer-column">
-        <h4>Navigation</h4>
-        <a href="#">Collections</a>
-        <a href="#">Activity</a>
-        <a href="#">Help</a>
+        <h4>Разделы</h4>
+        <a href="#">Коллекции</a>
+        <a href="#">Активность</a>
+        <a href="#">Помощь</a>
       </div>
       <div class="footer-column">
-        <h4>Links</h4>
-        <a href="#">Docs</a>
-        <a href="#">Support</a>
-        <a href="#">Contacts</a>
+        <h4>Ссылки</h4>
+        <a href="#">Документация</a>
+        <a href="#">Поддержка</a>
+        <a href="#">Контакты</a>
       </div>
     </footer>
   </div>
@@ -242,6 +240,7 @@ const error = ref<string | null>(null)
 const collectionsSection = ref<HTMLElement | null>(null)
 const selectedNft = ref<NFTViewItem | null>(null)
 const featuredNftKey = ref<string | null>(null)
+const showMetadataJson = ref(false)
 
 const featuredStorageKey = computed(
   () => `nft:featured:${address.value || 'guest'}:${chainId.value || 1}`,
@@ -258,14 +257,6 @@ const featuredNft = computed(() => {
   return nfts.value[0] ?? null
 })
 
-const uniqueCollections = computed(
-  () => new Set(nfts.value.map((nft) => nft.contract.name || nft.contract.address)).size,
-)
-
-const totalTraits = computed(() =>
-  nfts.value.reduce((acc, nft) => acc + (nft.metadata?.attributes?.length || 0), 0),
-)
-
 const nftsWithImage = computed(() => nfts.value.filter((nft) => Boolean(getNFTImage(nft))).length)
 
 const selectedMetadataJson = computed(() => {
@@ -277,16 +268,16 @@ const selectedMetadataJson = computed(() => {
 })
 
 const buildNftDescription = (item: NftListItem) => {
-  const parts = [`Rarity: ${item.rarity}`, `Status: ${item.mint_status}`]
+  const parts = [`Редкость: ${item.rarity}`, `Статус: ${item.mint_status}`]
   if (item.tx_hash) {
     parts.push(`Tx: ${item.tx_hash.slice(0, 10)}...`)
   }
   return parts.join(' | ')
 }
 
-const mapBackendNft = (item: NftListItem): NFTViewItem => {
-  const contractAddress = '0x0000000000000000000000000000000000000000'
-  const tokenId = String(item.token_id_onchain ?? item.id)
+const mapBackendNft = (item: NftListItem, details?: NftDetails): NFTViewItem => {
+  const contractAddress = details?.contract_address || details?.tx_hash || item.tx_hash || ''
+  const tokenId = String(details?.token_id_onchain ?? item.token_id_onchain ?? item.id)
   const title = `NFT #${item.id}`
 
   return {
@@ -321,8 +312,8 @@ const mapBackendNft = (item: NftListItem): NFTViewItem => {
       ],
     },
     timeLastUpdated: item.minted_at || new Date().toISOString(),
-    txHash: item.tx_hash || null,
-    metadataUrl: null,
+    txHash: details?.tx_hash || item.tx_hash || null,
+    metadataUrl: details?.metadata_url || null,
   }
 }
 
@@ -332,7 +323,18 @@ const loadNFTs = async () => {
 
   try {
     const backendItems = await apiService.getMyNfts()
-    nfts.value = backendItems.map(mapBackendNft)
+    const detailsResults = await Promise.allSettled(
+      backendItems.map((item) => apiService.getNftDetails(item.id)),
+    )
+
+    const detailsById = new Map<number, NftDetails>()
+    for (const result of detailsResults) {
+      if (result.status === 'fulfilled') {
+        detailsById.set(result.value.id, result.value)
+      }
+    }
+
+    nfts.value = backendItems.map((item) => mapBackendNft(item, detailsById.get(item.id)))
   } catch (err: any) {
     error.value = err?.message || 'Не удалось загрузить NFT. Попробуйте позже.'
     nfts.value = []
@@ -405,6 +407,16 @@ const truncateAddress = (walletAddress: string): string => {
   return `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`
 }
 
+const isZeroAddress = (walletAddress: string): boolean =>
+  /^0x0{40}$/i.test(walletAddress)
+
+const displayContract = (walletAddress: string): string => {
+  if (!walletAddress || isZeroAddress(walletAddress)) {
+    return 'Не указано'
+  }
+  return truncateAddress(walletAddress)
+}
+
 const getNftKey = (nft: NFTViewItem): string => `${nft.backendId}-${nft.tokenId}`
 
 const isFeaturedNft = (nft: NFTViewItem): boolean => {
@@ -423,11 +435,12 @@ const setFeatured = (nft: NFTViewItem) => {
 
 const closeNftDetails = () => {
   selectedNft.value = null
+  showMetadataJson.value = false
 }
 
 const formatDate = (value: string): string => {
   if (!value) {
-    return 'Unknown'
+    return 'Не указано'
   }
 
   const date = new Date(value)
@@ -476,7 +489,7 @@ const selectNFT = async (nft: NFTViewItem) => {
 
     const mergedName = remoteMetadata?.name || nft.metadata?.name || `NFT #${details.id}`
     const mergedDescription =
-      remoteMetadata?.description || `Rarity: ${details.rarity} | Status: ${details.mint_status}`
+      remoteMetadata?.description || `Редкость: ${details.rarity} | Статус: ${details.mint_status}`
     const mergedImage = remoteMetadata?.image || details.image_url || nft.metadata?.image
 
     selectedNft.value = {
@@ -488,7 +501,7 @@ const selectNFT = async (nft: NFTViewItem) => {
       metadataUrl: details.metadata_url || null,
       contract: {
         ...nft.contract,
-        address: details.contract_address || nft.contract.address,
+        address: details.contract_address || details.tx_hash || nft.contract.address,
       },
       timeLastUpdated: details.minted_at || nft.timeLastUpdated,
       metadata: {
@@ -498,8 +511,10 @@ const selectNFT = async (nft: NFTViewItem) => {
         attributes: mergedAttributes,
       },
     }
+    showMetadataJson.value = false
   } catch {
     // keep already selected basic card data if details request fails
+    showMetadataJson.value = false
   }
 }
 
@@ -657,22 +672,29 @@ onMounted(() => {
 
 .hero-stats {
   display: flex;
-  gap: 1.2rem;
+  gap: 0.75rem;
   margin-top: 2rem;
 }
 
 .stat-item {
-  min-width: 110px;
+  min-width: 150px;
+  padding: 0.62rem 0.8rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
 }
 
 .stat-value {
-  font-size: 1.4rem;
+  margin-top: 0.2rem;
+  font-size: 1.25rem;
   font-weight: 700;
 }
 
 .stat-label {
-  margin-top: 0.2rem;
-  font-size: 0.8rem;
+  margin-top: 0;
+  font-size: 0.76rem;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
   color: #b7c0e6;
 }
 
@@ -698,7 +720,8 @@ onMounted(() => {
 .hero-art-image {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
+  background: #07090f;
   position: relative;
   z-index: 1;
 }
@@ -760,12 +783,6 @@ onMounted(() => {
   color: #c6ceef;
 }
 
-.image-diagnostic {
-  margin-top: 0.3rem;
-  font-size: 0.86rem;
-  color: #8ba0e7;
-}
-
 .nfts-grid {
   margin-top: 1.4rem;
   display: grid;
@@ -792,10 +809,10 @@ onMounted(() => {
 .nft-media {
   position: relative;
   width: 100%;
-  aspect-ratio: 1 / 1;
+  aspect-ratio: 3 / 4;
   border-radius: 13px;
   overflow: hidden;
-  background: linear-gradient(135deg, #34376f, #202548);
+  background: linear-gradient(135deg, #1f2341, #101526);
 }
 
 .featured-badge {
@@ -815,7 +832,8 @@ onMounted(() => {
 .nft-image {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
+  background: #07090f;
   position: relative;
   z-index: 2;
 }
@@ -1006,14 +1024,15 @@ onMounted(() => {
   position: relative;
   border-radius: 14px;
   overflow: hidden;
-  background: linear-gradient(135deg, #34376f, #202548);
-  aspect-ratio: 1 / 1;
+  background: linear-gradient(135deg, #1f2341, #101526);
+  aspect-ratio: 3 / 4;
 }
 
 .nft-modal-image {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
+  background: #07090f;
   position: relative;
   z-index: 2;
 }
