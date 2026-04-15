@@ -20,53 +20,47 @@
 
       <nav class="main-nav">
         <RouterLink 
-          to="/movies" 
-          class="nav-link" 
-          active-class="active"
+          to="/movies"
+          :class="['nav-link', { active: isMoviesActive }]"
         >
           Фильмы
         </RouterLink>
-        <RouterLink
-          to="/map"
-          class="nav-link"
-          active-class="active"
-        >
-          Карта
-        </RouterLink>
         <RouterLink 
           to="/concerts" 
-          class="nav-link" 
-          active-class="active"
+          :class="['nav-link', { active: isConcertsActive }]"
         >
           Концерты
         </RouterLink>
         <RouterLink 
           to="/theatre" 
-          class="nav-link" 
-          active-class="active"
+          :class="['nav-link', { active: isTheatreActive }]"
         >
           Театр
         </RouterLink>
         <RouterLink 
           to="/standups" 
-          class="nav-link" 
-          active-class="active"
+          :class="['nav-link', { active: isStandupsActive }]"
         >
           Стендапы
         </RouterLink>
         <RouterLink
+          to="/map"
+          :class="['nav-link', { active: isMapActive }]"
+        >
+          Карта
+        </RouterLink>
+        <RouterLink
           v-if="isAuthenticated"
           to="/nft"
-          class="nav-link" 
-          active-class="active"
+          :class="['nav-link', { active: isNftActive }]"
         >
+        
           Мои NFT
         </RouterLink>
         <RouterLink
           v-if="isAuthenticated"
           to="/profile"
-          class="nav-link" 
-          active-class="active"
+          :class="['nav-link', { active: isProfileActive }]"
         >
           Профиль
         </RouterLink>
@@ -114,18 +108,30 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { RouterLink, useRouter } from 'vue-router'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useWalletStore } from '../stores/wallet'
 import { useAuthStore } from '../stores/auth'
 
 const router = useRouter()
+const route = useRoute()
 const walletStore = useWalletStore()
 const { isConnected, isConnecting, truncatedAddress, isWalletInstalled, error } = storeToRefs(walletStore)
 const { isAuthenticated } = storeToRefs(useAuthStore())
-const homeLink = computed(() => (isAuthenticated.value ? '/profile' : '/register'))
+const homeLink = computed(() => (isAuthenticated.value ? '/movies' : '/register'))
 const eventQuery = ref('')
 const logoLoadError = ref(false)
+
+const detailType = computed(() =>
+  route.name === 'event-detail' ? String(route.params.type || '') : '',
+)
+const isMoviesActive = computed(() => route.path.startsWith('/movies') || detailType.value === 'movie')
+const isMapActive = computed(() => route.path.startsWith('/map'))
+const isConcertsActive = computed(() => route.path.startsWith('/concerts') || detailType.value === 'concert')
+const isTheatreActive = computed(() => route.path.startsWith('/theatre') || detailType.value === 'theatre')
+const isStandupsActive = computed(() => route.path.startsWith('/standups') || detailType.value === 'standup')
+const isNftActive = computed(() => route.path.startsWith('/nft'))
+const isProfileActive = computed(() => route.path.startsWith('/profile') || route.path.startsWith('/users/'))
 
 const handleConnectWallet = async () => {
   if (!isAuthenticated.value) {

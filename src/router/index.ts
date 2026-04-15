@@ -6,7 +6,7 @@ const router = createRouter({
   routes: [
     {
       path: '/',
-      redirect: () => (authService.isAuthenticated() ? '/profile' : '/register')
+      redirect: () => (authService.isAuthenticated() ? '/movies' : '/register')
     },
     {
       path: '/events/:type/:id',
@@ -107,7 +107,7 @@ router.beforeEach((to) => {
   }
 
   if (to.meta.guestOnly && isAuth) {
-    return { name: 'profile' }
+    return { name: 'movies' }
   }
 
   return true

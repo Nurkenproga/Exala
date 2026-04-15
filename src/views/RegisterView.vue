@@ -92,7 +92,7 @@ const handleSubmit = async () => {
     await authStore.register(payload)
     isSuccess.value = true
     successTimer = window.setTimeout(() => {
-      router.push('/login')
+      router.push({ path: '/login', query: { redirect: '/movies' } })
     }, 1400)
   } catch {
     // error text shown from store

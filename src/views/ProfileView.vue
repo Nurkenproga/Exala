@@ -65,18 +65,18 @@
             </div>
           </div>
 
-          <div class="stats-grid">
-            <div class="stat-item">
-              <span class="stat-value">{{ profile?.nft_count ?? 0 }}</span>
-              <span class="stat-label">NFT</span>
+          <div class="profile-stats-grid">
+            <div class="profile-stat-card">
+              <span class="profile-stat-value">{{ profile?.nft_count ?? 0 }}</span>
+              <span class="profile-stat-label">NFT</span>
             </div>
-            <div class="stat-item">
-              <span class="stat-value">{{ profile?.events_attended ?? 0 }}</span>
-              <span class="stat-label">Посещено</span>
+            <div class="profile-stat-card">
+              <span class="profile-stat-value">{{ profile?.events_attended ?? 0 }}</span>
+              <span class="profile-stat-label">Посещено</span>
             </div>
-            <div class="stat-item">
-              <span class="stat-value">{{ profile?.explorer_points ?? 0 }}</span>
-              <span class="stat-label">Очки</span>
+            <div class="profile-stat-card">
+              <span class="profile-stat-value">{{ profile?.explorer_points ?? 0 }}</span>
+              <span class="profile-stat-label">Очки</span>
             </div>
           </div>
 
@@ -85,7 +85,7 @@
             <ul>
               <li>Подписчики: {{ profile?.followers_count ?? 0 }}</li>
               <li>Подписки: {{ profile?.following_count ?? 0 }}</li>
-              <li>Уровень: {{ profile?.explorer_level || '—' }}</li>
+              <li>Уровень: {{ levelLabel }}</li>
             </ul>
           </div>
         </section>
@@ -187,17 +187,27 @@ const walletAddressPreview = computed(() => {
   return `${address.slice(0, 6)}...${address.slice(-4)}`
 })
 
-const progressPercent = computed(() => {
-  const points = profile.value?.explorer_points ?? 0
-  return Math.min(100, Math.max(0, points % 100))
-})
+const pointsValue = computed(() => Math.max(0, profile.value?.explorer_points ?? 0))
 
 const levelLabel = computed(() => {
-  const level = (profile.value?.explorer_level || '').toLowerCase()
-  if (level.includes('legend')) return 'Легенда'
-  if (level.includes('collector')) return 'Коллекционер'
-  if (profile.value?.nft_count && profile.value.nft_count >= 10) return 'Коллекционер'
+  const points = pointsValue.value
+  if (points >= 500) return 'Легенда'
+  if (points >= 100) return 'Пионер'
   return 'Исследователь'
+})
+
+const progressPercent = computed(() => {
+  const points = pointsValue.value
+
+  if (points < 100) {
+    return points
+  }
+
+  if (points < 500) {
+    return Math.round(((points - 100) / 400) * 100)
+  }
+
+  return 100
 })
 
 const loadProfile = async () => {
@@ -416,31 +426,37 @@ onMounted(() => {
   background: linear-gradient(90deg, #5f7dff 0%, #7d4dff 100%);
 }
 
-.stats-grid {
+.profile-stats-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(110px, 1fr));
   gap: 0.6rem;
   margin-bottom: 1rem;
 }
 
-.stat-item {
+.profile-stat-card {
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(166, 180, 237, 0.2);
   border-radius: 12px;
   padding: 0.75rem 0.5rem;
   text-align: center;
+  min-height: 84px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
-.stat-value {
+.profile-stat-value {
   display: block;
   font-size: 1.1rem;
   font-weight: 700;
   color: #f3f7ff;
 }
 
-.stat-label {
+.profile-stat-label {
   font-size: 0.75rem;
   color: #a3b4e2;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
 }
 
 .achievements-title {
@@ -658,7 +674,7 @@ onMounted(() => {
     grid-template-columns: 1fr;
   }
 
-  .stats-grid {
+  .profile-stats-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 

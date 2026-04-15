@@ -68,7 +68,7 @@ const handleSubmit = async () => {
       username: normalizedUsername,
       password: form.password,
     })
-    const redirectTo = typeof route.query.redirect === 'string' ? route.query.redirect : '/profile'
+    const redirectTo = typeof route.query.redirect === 'string' ? route.query.redirect : '/movies'
     await router.push(redirectTo)
   } catch {
     // error text shown from store

@@ -30,13 +30,6 @@
             </button>
             <button 
               class="filter-btn" 
-              :class="{ active: filter === 'upcoming' }"
-              @click="filter = 'upcoming'"
-            >
-              Скоро
-            </button>
-            <button 
-              class="filter-btn" 
               :class="{ active: filter === 'pre_sales' }"
               @click="filter = 'pre_sales'"
             >
@@ -105,12 +98,10 @@ import type { Movie } from '@/services/api'
 
 const moviesStore = useMoviesStore()
 const router = useRouter()
-const filter = ref<'all' | 'upcoming' | 'pre_sales'>('all')
+const filter = ref<'all' | 'pre_sales'>('all')
 
 const filteredMovies = computed(() => {
   switch (filter.value) {
-    case 'upcoming':
-      return moviesStore.upcomingMovies
     case 'pre_sales':
       return moviesStore.preSalesMovies
     default:
