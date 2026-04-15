@@ -38,10 +38,17 @@ class WalletService {
         throw new Error('MetaMask не установлен')
       }
 
-      await window.ethereum.request({ method: 'eth_requestAccounts' })
+      const requestedAccounts = await window.ethereum.request({ method: 'eth_requestAccounts' })
+      const accounts = Array.isArray(requestedAccounts)
+        ? requestedAccounts.filter((item): item is string => typeof item === 'string' && item.length > 0)
+        : []
+
+      if (accounts.length === 0) {
+        throw new Error('В кошельке не выбран активный аккаунт. Откройте MetaMask и выберите аккаунт.')
+      }
 
       const provider = await this.getProvider()
-      const signer = await provider.getSigner()
+      const signer = await provider.getSigner(accounts[0])
       const address = await signer.getAddress()
 
       return {
@@ -53,6 +60,12 @@ class WalletService {
       if (error.code === 4001) {
         throw new Error('Пользователь отклонил запрос на подключение')
       }
+
+      const rawMessage = String(error?.message || '')
+      if (rawMessage.includes('No active wallet found')) {
+        throw new Error('Не найден активный аккаунт в кошельке. Откройте MetaMask, выберите аккаунт и повторите.')
+      }
+
       throw new Error(`Ошибка подключения кошелька: ${error.message}`)
     }
   }
