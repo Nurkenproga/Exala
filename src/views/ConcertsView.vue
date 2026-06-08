@@ -85,10 +85,12 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useConcertsStore } from '@/stores/concerts'
 import type { Concert } from '@/services/api'
 
 const concertsStore = useConcertsStore()
+const router = useRouter()
 const filter = ref<'all' | 'upcoming'>('all')
 
 const filteredConcerts = computed(() => {
@@ -123,9 +125,7 @@ const handleImageError = (event: Event) => {
 
 const selectConcert = (concert: Concert) => {
   concertsStore.selectConcert(concert)
-  if (concert.url) {
-    window.open(concert.url, '_blank')
-  }
+  router.push(`/events/concert/${concert.id}`)
 }
 
 onMounted(() => {

@@ -73,8 +73,8 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { useEventsStore } from '@/stores/events'
-import type { Event } from '@/stores/events'
+import { useEventsStore } from '../stores/events'
+import type { Event } from '../stores/events'
 
 const eventsStore = useEventsStore()
 
@@ -145,8 +145,12 @@ onMounted(() => {
 <style scoped>
 .events-view {
   min-height: calc(100vh - 80px);
-  background: linear-gradient(to bottom, #f5f7fa 0%, #ffffff 100%);
+  background:
+    radial-gradient(circle at 8% 0%, rgba(90, 74, 255, 0.25), transparent 32%),
+    radial-gradient(circle at 90% 18%, rgba(22, 201, 255, 0.16), transparent 32%),
+    linear-gradient(180deg, #0a0f22 0%, #070b19 56%, #060810 100%);
   padding: 2rem 0;
+  position: relative;
 }
 
 .container {
@@ -159,18 +163,20 @@ onMounted(() => {
 .page-header {
   text-align: center;
   margin-bottom: 3rem;
+  position: relative;
 }
 
 .page-title {
   font-size: 2.5rem;
-  font-weight: 700;
-  color: #1a202c;
+  font-weight: 800;
+  color: #f4f7ff;
   margin: 0 0 1rem 0;
+  letter-spacing: -0.03em;
 }
 
 .page-subtitle {
   font-size: 1.125rem;
-  color: #718096;
+  color: #a8b5de;
   max-width: 600px;
   margin: 0 auto;
 }
@@ -180,6 +186,11 @@ onMounted(() => {
   gap: 1.5rem;
   margin-bottom: 2rem;
   flex-wrap: wrap;
+  padding: 1rem;
+  border-radius: 16px;
+  border: 1px solid rgba(167, 179, 235, 0.26);
+  background: rgba(12, 17, 34, 0.78);
+  backdrop-filter: blur(4px);
 }
 
 .filter-group {
@@ -190,28 +201,30 @@ onMounted(() => {
 
 .filter-label {
   font-weight: 600;
-  color: #4a5568;
+  color: #d6dfff;
   font-size: 0.9rem;
 }
 
 .filter-select {
   padding: 0.75rem 1rem;
-  border: 2px solid #e2e8f0;
-  border-radius: 8px;
+  border: 1px solid rgba(167, 179, 235, 0.35);
+  border-radius: 12px;
   font-size: 1rem;
-  background: white;
+  background: rgba(255, 255, 255, 0.03);
+  color: #eff3ff;
   cursor: pointer;
-  transition: border-color 0.2s;
+  transition: border-color 0.2s, background 0.2s;
 }
 
 .filter-select:hover {
-  border-color: #667eea;
+  border-color: rgba(125, 77, 255, 0.75);
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .filter-select:focus {
   outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  border-color: rgba(125, 77, 255, 0.9);
+  box-shadow: 0 0 0 3px rgba(125, 77, 255, 0.2);
 }
 
 .events-grid {
@@ -221,25 +234,35 @@ onMounted(() => {
 }
 
 .event-card {
-  background: white;
-  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(16, 22, 43, 0.95), rgba(10, 13, 27, 0.95));
+  border-radius: 18px;
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(167, 179, 235, 0.2);
+  box-shadow: 0 16px 28px rgba(0, 0, 0, 0.3);
   transition: all 0.3s;
   cursor: pointer;
 }
 
 .event-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  border-color: rgba(125, 77, 255, 0.7);
+  box-shadow: 0 22px 34px rgba(0, 0, 0, 0.4);
 }
 
 .event-image {
   position: relative;
   width: 100%;
-  height: 200px;
+  height: 215px;
   overflow: hidden;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(145deg, #2c3173 0%, #202548 100%);
+}
+
+.event-image img {
+  transition: transform 0.35s ease;
+}
+
+.event-card:hover .event-image img {
+  transform: scale(1.05);
 }
 
 .event-image img {
@@ -252,15 +275,16 @@ onMounted(() => {
   position: absolute;
   top: 1rem;
   right: 1rem;
-  background: rgba(255, 255, 255, 0.95);
-  padding: 0.5rem 0.75rem;
-  border-radius: 20px;
-  font-size: 0.85rem;
+  background: rgba(125, 77, 255, 0.88);
+  padding: 0.38rem 0.68rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
   font-weight: 600;
-  color: #667eea;
+  color: #f5f2ff;
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.25);
 }
 
 .event-content {
@@ -278,26 +302,28 @@ onMounted(() => {
 .event-title {
   font-size: 1.25rem;
   font-weight: 700;
-  color: #1a202c;
+  color: #edf2ff;
   margin: 0;
   flex: 1;
 }
 
 .event-category {
-  background: #edf2f7;
-  color: #4a5568;
+  background: rgba(125, 77, 255, 0.18);
+  color: #d9ccff;
   padding: 0.25rem 0.75rem;
-  border-radius: 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(125, 77, 255, 0.32);
   font-size: 0.75rem;
   font-weight: 600;
   white-space: nowrap;
 }
 
 .event-description {
-  color: #718096;
+  color: #b8c5ea;
   font-size: 0.95rem;
   line-height: 1.6;
   margin: 0 0 1rem 0;
+  line-clamp: 2;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -309,7 +335,7 @@ onMounted(() => {
   flex-direction: column;
   gap: 0.5rem;
   font-size: 0.9rem;
-  color: #4a5568;
+  color: #c2ceef;
 }
 
 .event-date,
@@ -321,7 +347,7 @@ onMounted(() => {
 .empty-state {
   text-align: center;
   padding: 4rem 2rem;
-  color: #718096;
+  color: #b2bde0;
   font-size: 1.125rem;
 }
 

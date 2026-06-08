@@ -1,0 +1,334 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Sora:wght@400;500;600;700;800&display=swap');
+
+:root {
+  --ui-bg-main: #070913;
+  --ui-bg-soft: #0f1428;
+  --ui-bg-card: rgba(12, 17, 34, 0.95);
+  --ui-line: rgba(167, 179, 235, 0.2);
+  --ui-line-strong: rgba(167, 179, 235, 0.35);
+  --ui-text: #eef2ff;
+  --ui-muted: #a8b4de;
+  --ui-accent: #7d4dff;
+  --ui-accent-secondary: #4f9dff;
+}
+
+#app {
+  color: var(--ui-text);
+}
+
+.events-view,
+.movies-view,
+.concerts-view,
+.theatre-view,
+.standups-view,
+.map-view,
+.profile-view,
+.auth-view {
+  min-height: calc(100vh - 80px);
+  padding: 2rem 0;
+}
+
+.events-view {
+  background:
+    radial-gradient(circle at 8% 0%, rgba(125, 77, 255, 0.2), transparent 30%),
+    radial-gradient(circle at 92% 18%, rgba(79, 157, 255, 0.16), transparent 32%),
+    linear-gradient(180deg, #090d1e 0%, #070a16 58%, #05070f 100%) !important;
+}
+
+.movies-view {
+  background:
+    radial-gradient(circle at 10% 0%, rgba(208, 66, 94, 0.2), transparent 30%),
+    radial-gradient(circle at 90% 18%, rgba(79, 157, 255, 0.2), transparent 33%),
+    linear-gradient(180deg, #0b0e21 0%, #080a17 58%, #05070f 100%) !important;
+}
+
+.concerts-view {
+  background:
+    radial-gradient(circle at 12% 0%, rgba(255, 121, 63, 0.18), transparent 33%),
+    radial-gradient(circle at 90% 24%, rgba(125, 77, 255, 0.18), transparent 34%),
+    linear-gradient(180deg, #110d1f 0%, #0b0916 58%, #06050d 100%) !important;
+}
+
+.theatre-view {
+  background:
+    radial-gradient(circle at 10% 0%, rgba(228, 180, 83, 0.14), transparent 32%),
+    radial-gradient(circle at 88% 20%, rgba(126, 88, 255, 0.18), transparent 34%),
+    linear-gradient(180deg, #12101c 0%, #0b0913 58%, #07050d 100%) !important;
+}
+
+.standups-view {
+  background:
+    radial-gradient(circle at 8% 0%, rgba(255, 78, 132, 0.2), transparent 31%),
+    radial-gradient(circle at 92% 20%, rgba(33, 200, 195, 0.16), transparent 34%),
+    linear-gradient(180deg, #120e20 0%, #0b0817 58%, #07050d 100%) !important;
+}
+
+.map-view {
+  background:
+    radial-gradient(circle at 12% 0%, rgba(79, 157, 255, 0.16), transparent 32%),
+    radial-gradient(circle at 88% 18%, rgba(125, 77, 255, 0.2), transparent 34%),
+    linear-gradient(180deg, #090d1e 0%, #070a16 58%, #05070f 100%) !important;
+}
+
+.profile-view,
+.auth-view {
+  background:
+    radial-gradient(circle at 12% 0%, rgba(79, 157, 255, 0.17), transparent 32%),
+    radial-gradient(circle at 92% 18%, rgba(125, 77, 255, 0.2), transparent 34%),
+    linear-gradient(180deg, #090d1e 0%, #070a16 58%, #05070f 100%) !important;
+}
+
+.events-view .container,
+.movies-view .container,
+.concerts-view .container,
+.theatre-view .container,
+.standups-view .container,
+.map-view .container,
+.profile-view .container,
+.auth-view .container {
+  width: min(1240px, 92vw) !important;
+  margin: 0 auto;
+  padding: 0 !important;
+}
+
+.events-view .page-title,
+.movies-view .page-title,
+.concerts-view .page-title,
+.theatre-view .page-title,
+.standups-view .page-title,
+.map-view .page-title,
+.profile-view .page-title,
+.auth-view .page-title {
+  color: var(--ui-text) !important;
+  font-family: 'Sora', sans-serif;
+  font-weight: 800 !important;
+  letter-spacing: -0.03em;
+}
+
+.events-view .page-subtitle,
+.movies-view .page-subtitle,
+.concerts-view .page-subtitle,
+.theatre-view .page-subtitle,
+.standups-view .page-subtitle,
+.map-view .page-subtitle,
+.profile-view .page-subtitle,
+.auth-view .page-subtitle {
+  color: var(--ui-muted) !important;
+}
+
+.events-view .page-header,
+.movies-view .page-header,
+.concerts-view .page-header,
+.theatre-view .page-header,
+.standups-view .page-header,
+.map-view .page-header,
+.profile-view .page-header,
+.auth-view .page-header {
+  margin-bottom: 2.3rem !important;
+}
+
+.events-view .filter-select,
+.events-view .filter-btn,
+.movies-view .filter-btn,
+.concerts-view .filter-btn,
+.theatre-view .filter-btn,
+.standups-view .filter-btn,
+.movies-view .retry-btn,
+.concerts-view .retry-btn,
+.theatre-view .retry-btn,
+.standups-view .retry-btn,
+.events-view .retry-btn,
+.auth-view button,
+.profile-view .action-btn {
+  border-radius: 999px !important;
+  border: 1px solid var(--ui-line-strong) !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+  color: #eff3ff !important;
+  box-shadow: none !important;
+  transition: all 0.2s ease;
+}
+
+.movies-view .movies-header,
+.concerts-view .concerts-header,
+.theatre-view .theatre-header,
+.standups-view .standups-header {
+  background: transparent !important;
+  border: 0 !important;
+  padding: 0 !important;
+  margin-bottom: 1.35rem !important;
+}
+
+.movies-view .filters,
+.concerts-view .filters,
+.theatre-view .filters,
+.standups-view .filters {
+  display: inline-flex;
+  gap: 0.35rem;
+  padding: 0.32rem;
+  border-radius: 999px;
+  border: 1px solid rgba(167, 179, 235, 0.3);
+  background: rgba(12, 17, 34, 0.78);
+}
+
+.events-view .filter-btn.active,
+.movies-view .filter-btn.active,
+.concerts-view .filter-btn.active,
+.theatre-view .filter-btn.active,
+.standups-view .filter-btn.active,
+.movies-view .retry-btn,
+.concerts-view .retry-btn,
+.theatre-view .retry-btn,
+.standups-view .retry-btn,
+.events-view .retry-btn,
+.auth-view button,
+.profile-view .action-btn {
+  background: linear-gradient(120deg, var(--ui-accent), #6a6cff) !important;
+  border-color: transparent !important;
+}
+
+.profile-view .action-btn.secondary {
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+
+.profile-view .action-btn.danger {
+  background: linear-gradient(120deg, #d34678, #9c3df1) !important;
+}
+
+.events-view .event-card,
+.movies-view .movie-card,
+.concerts-view .concert-card,
+.theatre-view .theatre-card,
+.standups-view .standup-card,
+.profile-view .profile-card,
+.auth-view .auth-card {
+  background: linear-gradient(180deg, rgba(17, 22, 43, 0.96), rgba(10, 13, 27, 0.93)) !important;
+  border: 1px solid var(--ui-line) !important;
+  box-shadow: 0 16px 28px rgba(0, 0, 0, 0.28) !important;
+  border-radius: 16px !important;
+  color: var(--ui-text) !important;
+}
+
+.events-view .event-card:hover,
+.movies-view .movie-card:hover,
+.concerts-view .concert-card:hover,
+.theatre-view .theatre-card:hover,
+.standups-view .standup-card:hover,
+.profile-view .profile-card:hover,
+.auth-view .auth-card:hover {
+  border-color: rgba(125, 77, 255, 0.7) !important;
+  transform: translateY(-4px);
+}
+
+.events-view .event-title,
+.movies-view .movie-title,
+.concerts-view .concert-title,
+.theatre-view .theatre-title,
+.standups-view .standup-title,
+.profile-view .card-title,
+.auth-view .field span,
+.auth-view .switch-link,
+.auth-view .switch-link a,
+.profile-view .label,
+.profile-view .value,
+.profile-view .stat-label,
+.profile-view .achievements-title,
+.profile-view .achievements ul,
+.movies-view .movie-genres,
+.movies-view .movie-title-original,
+.concerts-view .meta-label,
+.theatre-view .meta-label,
+.standups-view .meta-label,
+.events-view .event-description,
+.events-view .event-category,
+.events-view .event-footer,
+.movies-view .movie-premiere,
+.standups-view .card-info-text,
+.standups-view .badge-category,
+.standups-view .badge-age,
+.concerts-view .concert-meta,
+.theatre-view .theatre-meta {
+  color: var(--ui-muted) !important;
+}
+
+.events-view .event-title,
+.movies-view .movie-title,
+.concerts-view .concert-title,
+.theatre-view .theatre-title,
+.standups-view .standup-title,
+.profile-view .card-title,
+.profile-view .stat-value,
+.movies-view .price-value,
+.concerts-view .price-value,
+.theatre-view .price-value,
+.standups-view .price-value,
+.auth-view .page-title,
+.auth-view button {
+  color: var(--ui-text) !important;
+}
+
+.events-view .event-image,
+.movies-view .movie-poster,
+.concerts-view .concert-poster,
+.theatre-view .theatre-poster,
+.standups-view .standup-banner {
+  background: linear-gradient(145deg, #30356f, #1d2144) !important;
+}
+
+.profile-view .row {
+  border-bottom-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+.profile-view .stat-item {
+  background: rgba(255, 255, 255, 0.03) !important;
+  border: 1px solid var(--ui-line) !important;
+}
+
+.profile-view .progress-track {
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+
+.profile-view .progress-fill {
+  background: linear-gradient(90deg, var(--ui-accent), #6a6cff) !important;
+}
+
+.auth-view input {
+  background: rgba(255, 255, 255, 0.03) !important;
+  border: 1px solid var(--ui-line) !important;
+  color: var(--ui-text) !important;
+}
+
+.auth-view input::placeholder {
+  color: #92a0cc;
+}
+
+.auth-view input:focus {
+  border-color: rgba(125, 77, 255, 0.75) !important;
+  box-shadow: 0 0 0 3px rgba(125, 77, 255, 0.2) !important;
+}
+
+.events-view .empty-state,
+.movies-view .empty-state,
+.concerts-view .empty-state,
+.theatre-view .empty-state,
+.standups-view .empty-state,
+.auth-view .error,
+.movies-view .error-message,
+.concerts-view .error-message,
+.theatre-view .error-message,
+.standups-view .error-message,
+.events-view .error-message {
+  color: #f1b2cb !important;
+}
+
+@media (max-width: 768px) {
+  .events-view .container,
+  .movies-view .container,
+  .concerts-view .container,
+  .theatre-view .container,
+  .standups-view .container,
+  .map-view .container,
+  .profile-view .container,
+  .auth-view .container {
+    width: min(1200px, 94vw) !important;
+  }
+}

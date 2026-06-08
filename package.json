@@ -1,5 +1,5 @@
 {
-  "name": "exala",
+  "name": "vibechain",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -13,6 +13,8 @@
   },
   "dependencies": {
     "ethers": "^6.16.0",
+    "leaflet": "^1.9.4",
+    "mapbox-gl": "^3.21.0",
     "pinia": "^3.0.4",
     "vue": "^3.5.27",
     "vue-router": "^5.0.1"
@@ -20,12 +22,14 @@
   "devDependencies": {
     "@tsconfig/node24": "^24.0.4",
     "@types/jsdom": "^27.0.0",
+    "@types/leaflet": "^1.9.21",
     "@types/node": "^24.10.9",
     "@vitejs/plugin-vue": "^6.0.3",
     "@vue/test-utils": "^2.4.6",
     "@vue/tsconfig": "^0.8.1",
     "jsdom": "^27.4.0",
     "npm-run-all2": "^8.0.4",
+    "osmtogeojson": "^3.0.0-beta.5",
     "typescript": "~5.9.3",
     "vite": "^7.3.1",
     "vite-plugin-vue-devtools": "^8.0.5",

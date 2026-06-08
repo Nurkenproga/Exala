@@ -1,6 +1,8 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { walletService, type WalletConnection } from '@/services/wallet'
+import { apiService } from '@/services/api'
+import { authService } from '@/services/auth'
 
 export const useWalletStore = defineStore('wallet', () => {
   const isConnected = ref(false)
@@ -10,6 +12,8 @@ export const useWalletStore = defineStore('wallet', () => {
   const isConnecting = ref(false)
   const error = ref<string | null>(null)
   const chainId = ref<number | null>(null)
+  const backendWalletAddress = ref<string>('')
+  const backendWalletType = ref<string>('')
 
   const truncatedAddress = computed(() => {
     if (!address.value) return ''
@@ -48,6 +52,28 @@ export const useWalletStore = defineStore('wallet', () => {
       localStorage.setItem('walletAddress', connection.address)
 
       setupEventListeners()
+
+      if (authService.isAuthenticated() && window.ethereum) {
+        try {
+          const message = `Connect to VibeChain\nAddress: ${connection.address}`
+          const signature = await connection.signer.signMessage(message)
+
+          await apiService.connectExternalWallet({
+            wallet_address: connection.address,
+            signature,
+            message,
+          })
+        } catch (backendError: any) {
+          // Current backend signature verification can fail (400 Invalid signature).
+          // Keep MetaMask connected locally so user can continue using wallet features.
+          console.error('Ошибка привязки external wallet на backend:', backendError)
+          error.value = 'MetaMask подключен, но backend пока не подтвердил подпись (временное ограничение сервера).'
+        }
+      }
+
+      if (authService.isAuthenticated()) {
+        await syncWalletFromBackend()
+      }
     } catch (err: any) {
       error.value = err.message || 'Ошибка подключения кошелька'
       isConnected.value = false
@@ -92,6 +118,10 @@ export const useWalletStore = defineStore('wallet', () => {
         }
 
         setupEventListeners()
+
+        if (authService.isAuthenticated()) {
+          await syncWalletFromBackend()
+        }
       }
     } catch (err) {
       console.error('Ошибка проверки соединения:', err)
@@ -102,10 +132,11 @@ export const useWalletStore = defineStore('wallet', () => {
 
   const setupEventListeners = () => {
     walletService.onAccountsChanged((accounts: string[]) => {
-      if (accounts.length === 0) {
+      const nextAccount = accounts[0]
+      if (!nextAccount) {
         disconnect()
-      } else if (accounts[0] !== address.value) {
-        address.value = accounts[0]
+      } else if (nextAccount !== address.value) {
+        address.value = nextAccount
         connect()
       }
     })
@@ -120,10 +151,30 @@ export const useWalletStore = defineStore('wallet', () => {
     error.value = null
   }
 
+  const syncWalletFromBackend = async () => {
+    if (!authService.isAuthenticated()) {
+      backendWalletAddress.value = ''
+      backendWalletType.value = ''
+      return
+    }
+
+    try {
+      const wallet = await apiService.getMyWallet()
+      backendWalletAddress.value = wallet.wallet_address || ''
+      backendWalletType.value = wallet.wallet_type || ''
+    } catch (err: any) {
+      console.error('Ошибка синхронизации wallet с backend:', err)
+    }
+  }
+
   const init = async () => {
     const wasConnected = localStorage.getItem('walletConnected')
     if (wasConnected === 'true') {
       await checkConnection()
+    }
+
+    if (authService.isAuthenticated()) {
+      await syncWalletFromBackend()
     }
   }
 
@@ -135,12 +186,15 @@ export const useWalletStore = defineStore('wallet', () => {
     isConnecting,
     error,
     chainId,
+    backendWalletAddress,
+    backendWalletType,
     truncatedAddress,
     isWalletInstalled,
     connect,
     disconnect,
     checkConnection,
     clearError,
-    init
+    init,
+    syncWalletFromBackend
   }
 })

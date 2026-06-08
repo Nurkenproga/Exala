@@ -1,9 +1,8 @@
-<script setup lang="ts">
-import TheWelcome from '../components/TheWelcome.vue'
-</script>
-
 <template>
   <main>
-    <TheWelcome />
+    <section style="padding: 2rem; color: #fff;">
+      <h1>VibeChain</h1>
+      <p>Главная страница в разработке.</p>
+    </section>
   </main>
 </template>

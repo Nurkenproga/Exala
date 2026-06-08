@@ -92,10 +92,12 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useTheatreStore } from '@/stores/theatre'
 import type { TheatreEvent } from '@/services/api'
 
 const theatreStore = useTheatreStore()
+const router = useRouter()
 const filter = ref<'all' | 'upcoming'>('all')
 
 const filteredEvents = computed(() => {
@@ -141,9 +143,7 @@ const handleImageError = (event: Event) => {
 
 const selectEvent = (event: TheatreEvent) => {
   theatreStore.selectEvent(event)
-  if (event.event_url) {
-    window.open(event.event_url, '_blank')
-  }
+  router.push(`/events/theatre/${event.id}`)
 }
 
 onMounted(() => {

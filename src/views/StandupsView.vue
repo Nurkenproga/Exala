@@ -75,15 +75,9 @@
                 </div>
               </div>
               <div class="standup-info-actions">
-                <a
-                  :href="event.card_ticket_url || event.url"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="btn-ticket"
-                  @click.stop
-                >
-                  {{ event.card_ticket_url ? 'Купить билет' : 'Подробнее' }}
-                </a>
+                <button class="btn-ticket" @click.stop="openDetail(event)">
+                  Подробнее
+                </button>
               </div>
             </div>
           </div>
@@ -100,10 +94,12 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useStandupsStore } from '@/stores/standups'
 import type { StandupEvent } from '@/services/api'
 
 const standupsStore = useStandupsStore()
+const router = useRouter()
 const filter = ref<'all' | 'upcoming'>('all')
 
 const filteredEvents = computed(() => {
@@ -133,10 +129,11 @@ const handleImageError = (event: Event) => {
 
 const selectEvent = (event: StandupEvent) => {
   standupsStore.selectEvent(event)
-  const link = event.card_ticket_url || event.url
-  if (link) {
-    window.open(link, '_blank')
-  }
+  router.push(`/events/standup/${event.id}`)
+}
+
+const openDetail = (event: StandupEvent) => {
+  router.push(`/events/standup/${event.id}`)
 }
 
 onMounted(() => {
