@@ -24,6 +24,7 @@ class AuthService {
   private baseUrl: string = import.meta.env.VITE_AUTH_BASE_URL || 'http://localhost:8001'
   private useProxy: boolean = import.meta.env.DEV
   private refreshPromise: Promise<LoginResponse> | null = null
+  private authDisabled: boolean = String(import.meta.env.VITE_AUTH_DISABLED).toLowerCase() === 'true'
 
   private getRequestUrl(endpoint: string): string {
     if (this.useProxy) {
@@ -35,7 +36,10 @@ class AuthService {
   private async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
     const response = await fetch(this.getRequestUrl(endpoint), {
       method: options?.method || 'GET',
-      headers: options?.headers,
+      headers: {
+        'ngrok-skip-browser-warning': 'true',
+        ...options?.headers,
+      },
       body: options?.body,
     })
 
@@ -63,6 +67,13 @@ class AuthService {
         }
       }
       throw new Error(errorMessage)
+    }
+
+    const contentType = response.headers.get('content-type') || ''
+    if (!contentType.includes('application/json')) {
+      const textBody = await response.text()
+      console.error('Auth API returned non-JSON response:', textBody.slice(0, 300))
+      throw new Error('Auth-сервер вернул не JSON. Проверьте ngrok/Vite proxy и перезапустите dev-сервер.')
     }
 
     return response.json() as Promise<T>
@@ -146,7 +157,15 @@ class AuthService {
   }
 
   isAuthenticated(): boolean {
-    return !!this.getToken()
+    if (this.authDisabled) return true
+    const token = this.getToken()
+    if (!token) return false
+
+    return !this.isTokenExpired()
+  }
+
+  isAuthDisabled(): boolean {
+    return this.authDisabled
   }
 
   getTokenPayload(): TokenPayload | null {
@@ -183,6 +202,12 @@ class AuthService {
     const payload = this.getTokenPayload()
     if (!payload || typeof payload.exp !== 'number') return null
     return new Date(payload.exp * 1000)
+  }
+
+  isTokenExpired(): boolean {
+    const expiryDate = this.getTokenExpiryDate()
+    if (!expiryDate) return false
+    return expiryDate.getTime() <= Date.now()
   }
 }
 

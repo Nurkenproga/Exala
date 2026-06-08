@@ -213,8 +213,13 @@ class ApiService {
     localStorage.removeItem('authToken')
     localStorage.removeItem('refreshToken')
 
+    if (authService.isAuthDisabled()) {
+      return
+    }
+
     if (window.location.pathname !== '/login') {
-      window.location.assign('/login')
+      const redirect = `${window.location.pathname}${window.location.search}${window.location.hash}`
+      window.location.assign(`/login?redirect=${encodeURIComponent(redirect)}`)
     }
   }
 
@@ -228,6 +233,7 @@ class ApiService {
       const response = await fetch(url, {
         method: options?.method || 'GET',
         headers: {
+          'ngrok-skip-browser-warning': 'true',
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
           ...options?.headers,
         },
@@ -268,6 +274,13 @@ class ApiService {
         }
 
         throw new Error(statusMessages[response.status] || 'Произошла ошибка. Попробуйте снова.')
+      }
+
+      const contentType = response.headers.get('content-type') || ''
+      if (!contentType.includes('application/json')) {
+        const text = await response.text()
+        console.error('API returned non-JSON response:', text.slice(0, 300))
+        throw new Error('Сервер вернул не JSON. Проверьте ngrok/Vite proxy и перезапустите dev-сервер.')
       }
 
       const data = await response.json()
@@ -378,18 +391,23 @@ class ApiService {
 
       const nftCountRaw = item.nft_count
       const eventsAttendedRaw = item.events_attended
+      const nftCount =
+        nftCountRaw === undefined || nftCountRaw === null ? undefined : Number(nftCountRaw) || 0
+      const eventsAttended =
+        eventsAttendedRaw === undefined || eventsAttendedRaw === null
+          ? undefined
+          : Number(eventsAttendedRaw) || 0
 
       return {
         id: Number.isFinite(parsedId as number) ? (parsedId as number) : null,
         username: String(item.username || 'unknown'),
         explorer_points: explorerPoints,
         explorer_level: item.explorer_level ? String(item.explorer_level) : undefined,
-        nft_count:
-          nftCountRaw === undefined || nftCountRaw === null ? undefined : Number(nftCountRaw) || 0,
+        nft_count: nftCount,
         events_attended:
-          eventsAttendedRaw === undefined || eventsAttendedRaw === null
+          nftCount === undefined && eventsAttended === undefined
             ? undefined
-            : Number(eventsAttendedRaw) || 0,
+            : Math.max(eventsAttended ?? 0, nftCount ?? 0),
       }
     })
   }

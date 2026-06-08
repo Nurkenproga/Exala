@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { RouterView } from 'vue-router'
 import EventsHeader from './components/EventsHeader.vue'
+import NftNotifications from './components/NftNotifications.vue'
 </script>
 
 <template>
   <div id="app">
     <EventsHeader />
+    <NftNotifications />
     <main>
       <RouterView />
     </main>

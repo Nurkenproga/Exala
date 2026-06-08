@@ -219,7 +219,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useWalletStore } from '@/stores/wallet'
 import { apiService, type NftDetails, type NftListItem } from '@/services/api'
@@ -241,9 +241,12 @@ const collectionsSection = ref<HTMLElement | null>(null)
 const selectedNft = ref<NFTViewItem | null>(null)
 const featuredNftKey = ref<string | null>(null)
 const showMetadataJson = ref(false)
+const NFT_CONTRACT_ADDRESS =
+  (import.meta.env.VITE_NFT_CONTRACT_ADDRESS as string | undefined)?.trim() ||
+  '0x77951dD6E495d480a6ad61133189d651D63d0E0b'
 
 const featuredStorageKey = computed(
-  () => `nft:featured:${address.value || 'guest'}:${chainId.value || 1}`,
+  () => `nft:featured:${address.value || localStorage.getItem('walletAddress') || 'guest'}:${chainId.value || 1}`,
 )
 
 const featuredNft = computed(() => {
@@ -276,7 +279,7 @@ const buildNftDescription = (item: NftListItem) => {
 }
 
 const mapBackendNft = (item: NftListItem, details?: NftDetails): NFTViewItem => {
-  const contractAddress = details?.contract_address || details?.tx_hash || item.tx_hash || ''
+  const contractAddress = details?.contract_address || NFT_CONTRACT_ADDRESS
   const tokenId = String(details?.token_id_onchain ?? item.token_id_onchain ?? item.id)
   const title = `NFT #${item.id}`
 
@@ -501,7 +504,7 @@ const selectNFT = async (nft: NFTViewItem) => {
       metadataUrl: details.metadata_url || null,
       contract: {
         ...nft.contract,
-        address: details.contract_address || details.tx_hash || nft.contract.address,
+        address: details.contract_address || nft.contract.address || NFT_CONTRACT_ADDRESS,
       },
       timeLastUpdated: details.minted_at || nft.timeLastUpdated,
       metadata: {
@@ -521,6 +524,10 @@ const selectNFT = async (nft: NFTViewItem) => {
 onMounted(() => {
   featuredNftKey.value = localStorage.getItem(featuredStorageKey.value)
   loadNFTs()
+})
+
+watch(featuredStorageKey, (key) => {
+  featuredNftKey.value = localStorage.getItem(key)
 })
 </script>
 

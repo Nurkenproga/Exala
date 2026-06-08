@@ -25,11 +25,17 @@ export default defineConfig(({ mode }) => {
         '/api': {
           target: apiTarget,
           changeOrigin: true,
+          headers: {
+            'ngrok-skip-browser-warning': 'true',
+          },
           rewrite: (path) => path.replace(/^\/api/, '')
         },
         '/auth-api': {
           target: authTarget,
           changeOrigin: true,
+          headers: {
+            'ngrok-skip-browser-warning': 'true',
+          },
           rewrite: (path) => path.replace(/^\/auth-api/, '')
         }
       }

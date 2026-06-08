@@ -8,12 +8,13 @@ export const useAuthStore = defineStore('auth', () => {
   const loading = ref(false)
   const error = ref<string | null>(null)
 
-  const isAuthenticated = computed(() => !!token.value)
+  const isAuthenticated = computed(() =>
+    authService.isAuthDisabled() || (!!token.value && !authService.isTokenExpired())
+  )
   const username = computed(() => authService.getUsernameFromToken())
   const tokenExpiry = computed(() => authService.getTokenExpiryDate())
   const isTokenExpired = computed(() => {
-    if (!tokenExpiry.value) return false
-    return tokenExpiry.value.getTime() <= Date.now()
+    return authService.isTokenExpired()
   })
 
   const init = () => {

@@ -40,21 +40,6 @@
           </div>
 
           <div v-if="nftStatus" class="status-box">{{ nftStatus }}</div>
-          <div v-if="nftResult" class="links-box">
-            <a v-if="nftResult.etherscan" :href="nftResult.etherscan" target="_blank" rel="noreferrer">Etherscan tx</a>
-            <a v-if="nftResult.imageUrl" :href="nftResult.imageUrl" target="_blank" rel="noreferrer">NFT image</a>
-            <button
-              v-if="importHint && metaMaskAvailable"
-              class="import-btn"
-              type="button"
-              @click="addNftToMetaMaskManually"
-            >
-              Добавить NFT в MetaMask
-            </button>
-          </div>
-          <p v-if="importHint" class="import-hint">
-            Если окно MetaMask не появилось: сеть {{ getChainName(importHint.chainId) }}, контракт {{ importHint.contractAddress }}, Token ID {{ importHint.tokenId }}.
-          </p>
         </div>
       </section>
     </div>
@@ -74,11 +59,13 @@ import {
   type TheatreEvent,
 } from '@/services/api'
 import { authService } from '@/services/auth'
+import { useNftTasksStore } from '@/stores/nftTasks'
 
 type EventData = Movie | Concert | TheatreEvent | StandupEvent
 
 const route = useRoute()
 const router = useRouter()
+const nftTasksStore = useNftTasksStore()
 
 const loading = ref(true)
 const error = ref<string | null>(null)
@@ -86,33 +73,6 @@ const eventData = ref<EventData | null>(null)
 const buyLoading = ref(false)
 const nftLoading = ref(false)
 const nftStatus = ref<string>('')
-const nftResult = ref<{ etherscan?: string; imageUrl?: string } | null>(null)
-const importHint = ref<{ contractAddress: string; tokenId: string; chainId: number } | null>(null)
-
-const NFT_CONTRACT_ADDRESS =
-  (import.meta.env.VITE_NFT_CONTRACT_ADDRESS as string | undefined)?.trim() ||
-  '0x77951dD6E495d480a6ad61133189d651D63d0E0b'
-const NFT_CHAIN_ID = Number((import.meta.env.VITE_NFT_CHAIN_ID as string | undefined)?.trim() || '11155111')
-
-const CHAIN_CONFIGS: Record<number, { chainName: string; rpcUrls: string[]; blockExplorerUrls: string[]; nativeCurrency: { name: string; symbol: string; decimals: number } }> = {
-  11155111: {
-    chainName: 'Sepolia',
-    rpcUrls: ['https://ethereum-sepolia-rpc.publicnode.com'],
-    blockExplorerUrls: ['https://sepolia.etherscan.io'],
-    nativeCurrency: {
-      name: 'Sepolia ETH',
-      symbol: 'ETH',
-      decimals: 18,
-    },
-  },
-}
-
-const ERC721_OWNER_OF_ABI = ['function ownerOf(uint256 tokenId) view returns (address)']
-
-const metaMaskAvailable = computed(() => {
-  const ethereum = (window as any).ethereum
-  return Boolean(ethereum?.request)
-})
 
 const eventType = computed(() => route.params.type as EventTypeName)
 const eventId = computed(() => Number(route.params.id))
@@ -274,265 +234,6 @@ const buyTicket = async () => {
   }
 }
 
-const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
-
-const getChainName = (chainId: number) => CHAIN_CONFIGS[chainId]?.chainName || `chainId ${chainId}`
-
-const normalizeChainId = (chainId?: number | null): number => {
-  if (typeof chainId === 'number' && Number.isFinite(chainId) && chainId > 0) {
-    return chainId
-  }
-
-  return NFT_CHAIN_ID
-}
-
-const toChainHex = (chainId: number): string => `0x${chainId.toString(16)}`
-
-const ensureMetaMaskChain = async (chainId: number): Promise<boolean> => {
-  const ethereum = (window as any).ethereum
-  if (!ethereum?.request) {
-    return false
-  }
-
-  const requiredHex = toChainHex(chainId).toLowerCase()
-
-  try {
-    const currentHex: string = await ethereum.request({ method: 'eth_chainId' })
-    if (currentHex?.toLowerCase() === requiredHex) {
-      return true
-    }
-
-    await ethereum.request({
-      method: 'wallet_switchEthereumChain',
-      params: [{ chainId: requiredHex }],
-    })
-    return true
-  } catch (switchError: any) {
-    if (switchError?.code === 4902 && CHAIN_CONFIGS[chainId]) {
-      try {
-        const config = CHAIN_CONFIGS[chainId]
-        await ethereum.request({
-          method: 'wallet_addEthereumChain',
-          params: [
-            {
-              chainId: requiredHex,
-              chainName: config.chainName,
-              rpcUrls: config.rpcUrls,
-              blockExplorerUrls: config.blockExplorerUrls,
-              nativeCurrency: config.nativeCurrency,
-            },
-          ],
-        })
-
-        return true
-      } catch {
-        return false
-      }
-    }
-
-    return false
-  }
-}
-
-const resolveNftImportContext = async (
-  tokenId: number | string | null | undefined,
-  imageUrl?: string | null,
-): Promise<{ contractAddress: string; chainId: number; imageUrl?: string | null }> => {
-  const resolved = {
-    contractAddress: NFT_CONTRACT_ADDRESS,
-    chainId: normalizeChainId(undefined),
-    imageUrl: imageUrl || null,
-  }
-
-  if (tokenId === null || tokenId === undefined || tokenId === '') {
-    return resolved
-  }
-
-  try {
-    const tokenNumber = Number(tokenId)
-    if (Number.isFinite(tokenNumber) && tokenNumber > 0) {
-      const directDetails = await apiService.getNftDetails(tokenNumber)
-      if (directDetails.contract_address) {
-        resolved.contractAddress = directDetails.contract_address
-      }
-      resolved.chainId = normalizeChainId(directDetails.chain_id)
-      if (!resolved.imageUrl && directDetails.image_url) {
-        resolved.imageUrl = directDetails.image_url
-      }
-      return resolved
-    }
-
-    const myNfts = await apiService.getMyNfts()
-    const matched = myNfts.find((item) => String(item.token_id_onchain ?? '') === String(tokenId))
-    if (!matched) {
-      return resolved
-    }
-
-    const details = await apiService.getNftDetails(matched.id)
-    if (details.contract_address) {
-      resolved.contractAddress = details.contract_address
-    }
-
-    resolved.chainId = normalizeChainId(details.chain_id)
-    if (!resolved.imageUrl && details.image_url) {
-      resolved.imageUrl = details.image_url
-    }
-  } catch (contextError) {
-    console.warn('Не удалось получить контекст NFT для MetaMask, используем значения по умолчанию:', contextError)
-  }
-
-  return resolved
-}
-
-const getConnectedWalletAddress = async (): Promise<string | null> => {
-  const ethereum = (window as any).ethereum
-  if (!ethereum?.request) {
-    return null
-  }
-
-  try {
-    const accounts: string[] = await ethereum.request({ method: 'eth_accounts' })
-    return accounts[0] || null
-  } catch {
-    return null
-  }
-}
-
-const getTokenOwner = async (
-  contractAddress: string,
-  tokenId: string,
-  chainId: number,
-): Promise<string | null> => {
-  const rpcUrl = CHAIN_CONFIGS[chainId]?.rpcUrls?.[0]
-  if (!rpcUrl) {
-    return null
-  }
-
-  try {
-    const { JsonRpcProvider, Contract, getAddress } = await import('ethers')
-    const provider = new JsonRpcProvider(rpcUrl)
-    const contract = new Contract(contractAddress, ERC721_OWNER_OF_ABI, provider)
-    const owner = await (contract as any).ownerOf(BigInt(tokenId))
-    return getAddress(String(owner))
-  } catch {
-    return null
-  }
-}
-
-const addNftToMetaMask = async (tokenId: number | string | null | undefined, imageUrl?: string | null) => {
-  if (tokenId === null || tokenId === undefined || tokenId === '') {
-    return false
-  }
-
-  const normalizedTokenId = String(tokenId)
-  const context = await resolveNftImportContext(normalizedTokenId, imageUrl)
-  importHint.value = {
-    contractAddress: context.contractAddress,
-    tokenId: normalizedTokenId,
-    chainId: context.chainId,
-  }
-
-  const ethereum = (window as any).ethereum
-  if (!ethereum?.request) {
-    return false
-  }
-
-  const chainReady = await ensureMetaMaskChain(context.chainId)
-  if (!chainReady) {
-    nftStatus.value = `NFT готов. Переключите MetaMask в сеть ${getChainName(context.chainId)} и попробуйте снова.`
-    return false
-  }
-
-  const currentWallet = await getConnectedWalletAddress()
-  const tokenOwner = await getTokenOwner(context.contractAddress, normalizedTokenId, context.chainId)
-  if (currentWallet && tokenOwner && currentWallet.toLowerCase() !== tokenOwner.toLowerCase()) {
-    nftStatus.value = `NFT выпущен на адрес ${tokenOwner}, а в MetaMask выбран ${currentWallet}. Переключите аккаунт и повторите.`
-    return false
-  }
-
-  try {
-    const added = await ethereum.request({
-      method: 'wallet_watchAsset',
-      params: {
-        type: 'ERC721',
-        options: {
-          address: context.contractAddress,
-          tokenId: normalizedTokenId,
-          image: context.imageUrl || undefined,
-        },
-      },
-    })
-
-    return Boolean(added)
-  } catch (e: any) {
-    const message = String(e?.message || '')
-
-    if (message.includes('does not match the chain') || message.includes('Unable to verify ownership')) {
-      const walletPart = currentWallet ? ` Текущий адрес: ${currentWallet}.` : ''
-      nftStatus.value = `MetaMask не смог подтвердить владение NFT в сети ${getChainName(context.chainId)}.${walletPart} Проверьте контракт/сеть и аккаунт.`
-      return false
-    }
-
-    if (e?.code === -32002) {
-      nftStatus.value = 'Запрос уже открыт в MetaMask. Подтвердите его в кошельке.'
-      return false
-    }
-
-    if (e?.code === 4001) {
-      nftStatus.value = 'Добавление NFT отменено в MetaMask.'
-      return false
-    }
-
-    console.warn('Не удалось открыть окно добавления NFT в MetaMask:', e)
-    return false
-  }
-}
-
-const addNftToMetaMaskManually = async () => {
-  if (!importHint.value) return
-
-  const added = await addNftToMetaMask(importHint.value.tokenId, nftResult.value?.imageUrl)
-  nftStatus.value = added
-    ? 'NFT готов и добавлен в MetaMask.'
-    : 'NFT готов. Подтвердите добавление в MetaMask или импортируйте вручную по данным ниже.'
-}
-
-const pollNft = async (checkinId: number, maxAttempts = 40, tokenIdHint?: number | null) => {
-  for (let i = 0; i < maxAttempts; i += 1) {
-    const status = await apiService.getCheckinNftStatus(checkinId)
-
-    if (status.status === 'pending') {
-      nftStatus.value = 'Создаем NFT...'
-    } else if (status.status === 'minting') {
-      nftStatus.value = 'Минтим NFT в сети...'
-    } else if (status.status === 'minted') {
-      const tokenId = status.nft_token?.token_id ?? tokenIdHint ?? null
-      const txHash = status.nft_token?.tx_hash
-      const image = status.nft_token?.image_url
-      nftResult.value = {
-        etherscan: txHash ? `https://sepolia.etherscan.io/tx/${txHash}` : undefined,
-        imageUrl: image || undefined,
-      }
-
-      const added = await addNftToMetaMask(tokenId, image)
-      nftStatus.value = added
-        ? 'NFT готов и добавлен в MetaMask.'
-        : 'NFT готов. Подтвердите добавление в MetaMask или импортируйте вручную по данным ниже.'
-      return
-    } else if (status.status === 'failed') {
-      nftStatus.value = 'Не удалось выпустить NFT. Попробуйте позже.'
-      return
-    } else {
-      nftStatus.value = `Текущий статус: ${status.status}`
-      return
-    }
-
-    await wait(3000)
-  }
-
-  nftStatus.value = 'Проверка занимает больше времени, попробуйте обновить статус позже.'
-}
-
 const getNft = async () => {
   if (!eventData.value) return
 
@@ -542,8 +243,6 @@ const getNft = async () => {
   }
 
   nftLoading.value = true
-  nftResult.value = null
-  importHint.value = null
   nftStatus.value = 'Создаем чек-ин...'
 
   try {
@@ -552,16 +251,16 @@ const getNft = async () => {
       external_event_id: eventId.value,
     })
 
-    if (checkin.status === 'minted') {
-      const added = await addNftToMetaMask(checkin.nft_token_id)
-      nftStatus.value = added
-        ? 'NFT готов и добавлен в MetaMask.'
-        : 'NFT уже готов. Подтвердите добавление в MetaMask или импортируйте вручную по данным ниже.'
-      return
-    }
+    nftTasksStore.trackCheckin({
+      checkinId: checkin.checkin_id,
+      eventTitle: title.value,
+      initialStatus: checkin.status,
+      tokenId: String(checkin.nft_token_id),
+    })
 
-    nftStatus.value = `Чек-ин создан (#${checkin.checkin_id}), ожидаем выпуск NFT...`
-    await pollNft(checkin.checkin_id, 40, checkin.nft_token_id)
+    nftStatus.value = checkin.status === 'minted'
+      ? 'NFT уже готов. Откройте раздел «Мои NFT».'
+      : 'Чек-ин принят. NFT создается в фоне, можно продолжать пользоваться сайтом.'
   } catch (e) {
     nftStatus.value = e instanceof Error ? e.message : 'Ошибка получения NFT'
   } finally {

@@ -28,7 +28,7 @@
           </div>
           <div class="row">
             <span class="label">Посещено</span>
-            <span class="value">{{ profile.events_attended }}</span>
+            <span class="value">{{ visitedEventsCount }}</span>
           </div>
           <div class="row">
             <span class="label">NFT</span>
@@ -78,6 +78,11 @@ const loading = ref(false)
 const error = ref<string | null>(null)
 const followLoading = ref(false)
 const isFollowing = ref(false)
+
+const visitedEventsCount = computed(() => {
+  if (!profile.value) return 0
+  return Math.max(profile.value.events_attended, profile.value.nft_count)
+})
 const myUserId = ref<number | null>(null)
 
 const isOwnProfile = computed(() => {

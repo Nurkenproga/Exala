@@ -102,11 +102,15 @@ const router = createRouter({
 router.beforeEach((to) => {
   const isAuth = authService.isAuthenticated()
 
+  if (!isAuth && authService.getToken()) {
+    authService.clearTokens()
+  }
+
   if (to.meta.requiresAuth && !isAuth) {
     return { name: 'login', query: { redirect: to.fullPath } }
   }
 
-  if (to.meta.guestOnly && isAuth) {
+  if (to.meta.guestOnly && isAuth && !authService.isAuthDisabled()) {
     return { name: 'movies' }
   }
 
