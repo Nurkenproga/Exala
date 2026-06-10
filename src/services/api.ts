@@ -1,5 +1,16 @@
 import { authService } from '@/services/auth'
 
+class ApiError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+    readonly responseBody: string,
+  ) {
+    super(message)
+    this.name = 'ApiError'
+  }
+}
+
 export interface Movie {
   id: number
   movie_id: number
@@ -138,6 +149,8 @@ export interface NftStatusToken {
   image_url: string | null
   tx_hash: string | null
   rarity: string
+  contract_address?: string | null
+  chain_id?: number | null
 }
 
 export interface CheckinNftStatusResponse {
@@ -187,15 +200,10 @@ export interface ConnectExternalWalletResponse {
 
 export type EventTypeName = 'movie' | 'concert' | 'theatre' | 'standup'
 
-export interface BuyTicketResponse {
-  buy_ticket_url?: string
-  url?: string
-  link?: string
-  [key: string]: unknown
-}
-
 class ApiService {
-  private baseUrl: string = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
+  private baseUrl: string = (
+    import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
+  ).replace(/\/+$/, '')
   private useProxy: boolean = import.meta.env.DEV
 
   constructor() {
@@ -273,7 +281,11 @@ class ApiService {
           504: 'Сервис отвечает слишком долго. Попробуйте позже.',
         }
 
-        throw new Error(statusMessages[response.status] || 'Произошла ошибка. Попробуйте снова.')
+        throw new ApiError(
+          statusMessages[response.status] || 'Произошла ошибка. Попробуйте снова.',
+          response.status,
+          errorText,
+        )
       }
 
       const contentType = response.headers.get('content-type') || ''
@@ -327,22 +339,6 @@ class ApiService {
 
   async getStandupById(id: number): Promise<StandupEvent> {
     return this.request<StandupEvent>(`/standups/${id}`)
-  }
-
-  async buyMovieTicket(id: number): Promise<BuyTicketResponse> {
-    return this.request<BuyTicketResponse>(`/movies/${id}/buy-ticket`)
-  }
-
-  async buyConcertTicket(id: number): Promise<BuyTicketResponse> {
-    return this.request<BuyTicketResponse>(`/concerts/${id}/buy-ticket`)
-  }
-
-  async buyTheatreTicket(id: number): Promise<BuyTicketResponse> {
-    return this.request<BuyTicketResponse>(`/theatre/${id}/buy-ticket`)
-  }
-
-  async buyStandupTicket(id: number): Promise<BuyTicketResponse> {
-    return this.request<BuyTicketResponse>(`/standups/${id}/buy-ticket`)
   }
 
   async getMyProfile(): Promise<OwnProfile> {
@@ -523,8 +519,7 @@ class ApiService {
     } catch (error) {
       // Backend currently returns 422 for /nfts/my due dependency wiring.
       // Fallback keeps frontend functional without backend changes.
-      const message = error instanceof Error ? error.message : ''
-      if (message.includes('422')) {
+      if (error instanceof ApiError && error.status === 422) {
         const me = await this.getMyProfile()
         return this.getUserNfts(me.username)
       }
@@ -541,16 +536,11 @@ class ApiService {
   }
 
   async getMyWallet(): Promise<WalletInfo> {
-    const me = await this.getMyProfile()
-    const query = new URLSearchParams({ current_user_id: String(me.id) })
-    return this.request<WalletInfo>(`/wallet/my?${query.toString()}`)
+    return this.request<WalletInfo>('/wallet/my')
   }
 
   async connectExternalWallet(payload: ConnectExternalWalletRequest): Promise<ConnectExternalWalletResponse> {
-    const me = await this.getMyProfile()
-    const query = new URLSearchParams({ current_user_id: String(me.id) })
-
-    return this.request<ConnectExternalWalletResponse>(`/wallet/connect-external?${query.toString()}`, {
+    return this.request<ConnectExternalWalletResponse>('/wallet/connect-external', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

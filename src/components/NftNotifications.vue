@@ -1,14 +1,43 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useNftTasksStore, type NftNotification } from '@/stores/nftTasks'
+import { requestMetaMaskNftImportWithRetry } from '@/services/metaMaskNft'
 
 const router = useRouter()
 const nftTasksStore = useNftTasksStore()
+const importingNotificationIds = ref<number[]>([])
 
 const openNotification = async (notification: NftNotification) => {
   if (!notification.actionRoute) return
   nftTasksStore.dismissNotification(notification.id)
   await router.push(notification.actionRoute)
+}
+
+const importNotificationNft = async (notification: NftNotification) => {
+  if (!notification.metaMaskAsset || importingNotificationIds.value.includes(notification.id)) return
+
+  importingNotificationIds.value = [...importingNotificationIds.value, notification.id]
+  notification.message = 'Открываем MetaMask. Если там есть старый запрос, завершите или отмените его.'
+
+  try {
+    const result = await requestMetaMaskNftImportWithRetry(notification.metaMaskAsset, {
+      force: true,
+      verifyOwner: true,
+      onPending: (message) => {
+        notification.message = message
+      },
+    })
+
+    notification.message = result.message
+    if (result.status === 'added' || result.status === 'already-added') {
+      window.setTimeout(() => nftTasksStore.dismissNotification(notification.id), 2500)
+    }
+  } finally {
+    importingNotificationIds.value = importingNotificationIds.value.filter(
+      (id) => id !== notification.id,
+    )
+  }
 }
 
 </script>
@@ -29,14 +58,29 @@ const openNotification = async (notification: NftNotification) => {
         <div class="notification-copy">
           <strong>{{ notification.title }}</strong>
           <p>{{ notification.message }}</p>
-          <button
-            v-if="notification.actionRoute"
-            type="button"
-            class="notification-action"
-            @click="openNotification(notification)"
-          >
-            {{ notification.actionLabel }}
-          </button>
+          <div class="notification-actions">
+            <button
+              v-if="notification.metaMaskAsset"
+              type="button"
+              class="notification-action is-primary"
+              :disabled="importingNotificationIds.includes(notification.id)"
+              @click="importNotificationNft(notification)"
+            >
+              {{
+                importingNotificationIds.includes(notification.id)
+                  ? 'Ожидаем MetaMask...'
+                  : 'Добавить в MetaMask'
+              }}
+            </button>
+            <button
+              v-if="notification.actionRoute"
+              type="button"
+              class="notification-action"
+              @click="openNotification(notification)"
+            >
+              {{ notification.actionLabel }}
+            </button>
+          </div>
         </div>
 
         <button
@@ -139,8 +183,14 @@ const openNotification = async (notification: NftNotification) => {
   line-height: 1.45;
 }
 
-.notification-action {
+.notification-actions {
   margin-top: 11px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.notification-action {
   padding: 0;
   border: 0;
   color: #91bfff;
@@ -149,6 +199,18 @@ const openNotification = async (notification: NftNotification) => {
   font-size: 0.86rem;
   font-weight: 700;
   cursor: pointer;
+}
+
+.notification-action.is-primary {
+  padding: 0.42rem 0.7rem;
+  border-radius: 8px;
+  color: #fff;
+  background: linear-gradient(120deg, #7d4dff, #596fff);
+}
+
+.notification-action:disabled {
+  cursor: wait;
+  opacity: 0.7;
 }
 
 .notification-action:hover {
