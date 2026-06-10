@@ -9,6 +9,10 @@ const router = createRouter({
       redirect: () => (authService.isAuthenticated() ? '/movies' : '/register')
     },
     {
+      path: '/events',
+      redirect: '/movies',
+    },
+    {
       path: '/events/:type/:id',
       name: 'event-detail',
       component: () => import('../views/EventDetailView.vue'),
