@@ -1,7 +1,10 @@
 import { ref } from 'vue'
 import { defineStore } from 'pinia'
 import { apiService, type CheckinNftStatusResponse } from '@/services/api'
-import { requestMetaMaskNftImport } from '@/services/metaMaskNft'
+import {
+  getMintedTokenIdFromTransaction,
+  requestMetaMaskNftImportDirect,
+} from '@/services/metaMaskNft'
 
 type NftTaskStatus = CheckinNftStatusResponse['status']
 type NotificationKind = 'progress' | 'success' | 'error'
@@ -16,20 +19,27 @@ export interface NftNotification {
   metaMaskAsset?: {
     tokenId: string
     imageUrl?: string | null
+    contractAddress?: string | null
   }
 }
 
 interface NftTask {
   checkinId: number
+  backendNftId: number
   eventTitle: string
   status: NftTaskStatus
   startedAt: number
   tokenId?: string
   imageUrl?: string | null
+  contractAddress?: string | null
+  txHash?: string | null
 }
 
 const POLL_INTERVAL_MS = 4_000
 const POLL_TIMEOUT_MS = 10 * 60_000
+const TOKEN_RESOLUTION_INTERVAL_MS = 2_500
+const TOKEN_RESOLUTION_TIMEOUT_MS = 90_000
+const TASK_STORAGE_KEY = 'nft:pending-tasks:v1'
 const pollTimers = new Map<number, number>()
 let notificationId = 0
 let latestCheckinId: number | null = null
@@ -37,6 +47,21 @@ let latestCheckinId: number | null = null
 export const useNftTasksStore = defineStore('nftTasks', () => {
   const tasks = ref<NftTask[]>([])
   const notifications = ref<NftNotification[]>([])
+
+  const persistTasks = () => {
+    const unfinishedTasks = tasks.value.filter(
+      (task) =>
+        task.status === 'pending' ||
+        task.status === 'minting' ||
+        (task.status === 'minted' && !task.tokenId),
+    )
+    localStorage.setItem(TASK_STORAGE_KEY, JSON.stringify(unfinishedTasks))
+  }
+
+  const removeTask = (checkinId: number) => {
+    tasks.value = tasks.value.filter((item) => item.checkinId !== checkinId)
+    persistTasks()
+  }
 
   const dismissNotification = (id: number) => {
     notifications.value = notifications.value.filter((item) => item.id !== id)
@@ -63,7 +88,57 @@ export const useNftTasksStore = defineStore('nftTasks', () => {
 
   const updateTaskStatus = (checkinId: number, status: NftTaskStatus) => {
     const task = tasks.value.find((item) => item.checkinId === checkinId)
-    if (task) task.status = status
+    if (task) {
+      task.status = status
+      persistTasks()
+    }
+  }
+
+  const wait = (durationMs: number) =>
+    new Promise<void>((resolve) => window.setTimeout(resolve, durationMs))
+
+  const resolveMintedToken = async (task: NftTask) => {
+    const deadline = Date.now() + TOKEN_RESOLUTION_TIMEOUT_MS
+
+    while (!task.tokenId && Date.now() < deadline) {
+      try {
+        const status = await apiService.getCheckinNftStatus(task.checkinId)
+        if (status.nft_token?.token_id !== null && status.nft_token?.token_id !== undefined) {
+          task.tokenId = String(status.nft_token.token_id)
+        }
+        task.imageUrl = status.nft_token?.image_url || task.imageUrl
+        task.contractAddress = status.nft_token?.contract_address || task.contractAddress
+        task.txHash = status.nft_token?.tx_hash || task.txHash
+      } catch (error) {
+        console.warn(`Не удалось обновить статус NFT для check-in ${task.checkinId}:`, error)
+      }
+
+      if (!task.tokenId) {
+        try {
+          const details = await apiService.getNftDetails(task.backendNftId)
+          if (details.token_id_onchain !== null && details.token_id_onchain !== undefined) {
+            task.tokenId = String(details.token_id_onchain)
+          }
+          task.imageUrl = details.image_url || task.imageUrl
+          task.contractAddress = details.contract_address || task.contractAddress
+          task.txHash = details.tx_hash || task.txHash
+        } catch (error) {
+          console.warn(`Не удалось получить детали NFT ${task.backendNftId}:`, error)
+        }
+      }
+
+      if (!task.tokenId && task.txHash) {
+        task.tokenId =
+          (await getMintedTokenIdFromTransaction(task.txHash, task.contractAddress)) || undefined
+      }
+
+      persistTasks()
+      if (!task.tokenId) {
+        await wait(TOKEN_RESOLUTION_INTERVAL_MS)
+      }
+    }
+
+    return task.tokenId
   }
 
   const finishTask = async (task: NftTask, status: NftTaskStatus) => {
@@ -75,32 +150,60 @@ export const useNftTasksStore = defineStore('nftTasks', () => {
     )
 
     if (status === 'minted') {
-      const metaMaskAsset = task.tokenId
-        ? {
-            tokenId: task.tokenId,
-            imageUrl: task.imageUrl,
-          }
-        : undefined
+      await resolveMintedToken(task)
 
+      if (!task.tokenId) {
+        removeTask(task.checkinId)
+        notify({
+          kind: 'error',
+          title: 'NFT выпущен, но Token ID не получен',
+          message: 'Сервер сообщил о mint, но не вернул blockchain Token ID. Автоматически открыть MetaMask пока невозможно.',
+          actionLabel: 'Открыть Мои NFT',
+          actionRoute: '/nft',
+        })
+        return
+      }
+
+      const metaMaskAsset = {
+        tokenId: task.tokenId,
+        imageUrl: task.imageUrl,
+        contractAddress: task.contractAddress,
+      }
+
+      const automaticImport = task.checkinId === latestCheckinId
+        ? requestMetaMaskNftImportDirect(metaMaskAsset)
+        : null
+
+      removeTask(task.checkinId)
       notify({
         kind: 'success',
         title: 'Ваш NFT готов',
-        message: `${task.eventTitle} уже появился в вашей коллекции.`,
+        message: `${task.eventTitle} уже появился в коллекции. Подтвердите добавление в MetaMask.`,
         actionLabel: 'Открыть Мои NFT',
         actionRoute: '/nft',
         metaMaskAsset,
       })
 
-      if (metaMaskAsset && task.checkinId === latestCheckinId) {
-        await requestMetaMaskNftImport(
-          metaMaskAsset,
-          undefined,
-          () => task.checkinId === latestCheckinId,
-        )
+      if (automaticImport) {
+        const result = await automaticImport
+        if (
+          result.status !== 'added' &&
+          result.status !== 'rejected'
+        ) {
+          notify({
+            kind: 'error',
+            title: 'MetaMask не открыл новый NFT',
+            message: result.message,
+            actionLabel: 'Открыть NFT и повторить',
+            actionRoute: '/nft',
+            metaMaskAsset,
+          })
+        }
       }
       return
     }
 
+    removeTask(task.checkinId)
     notify({
       kind: 'error',
       title: 'NFT не удалось выпустить',
@@ -114,6 +217,7 @@ export const useNftTasksStore = defineStore('nftTasks', () => {
 
     if (Date.now() - task.startedAt > POLL_TIMEOUT_MS) {
       stopPolling(checkinId)
+      removeTask(checkinId)
       notify({
         kind: 'error',
         title: 'NFT создается дольше обычного',
@@ -133,6 +237,8 @@ export const useNftTasksStore = defineStore('nftTasks', () => {
           task.tokenId = String(response.nft_token.token_id)
         }
         task.imageUrl = response.nft_token?.image_url || null
+        task.contractAddress = response.nft_token?.contract_address || null
+        task.txHash = response.nft_token?.tx_hash || null
         await finishTask(task, response.status)
         return
       }
@@ -146,22 +252,23 @@ export const useNftTasksStore = defineStore('nftTasks', () => {
 
   const trackCheckin = (payload: {
     checkinId: number
+    backendNftId: number
     eventTitle: string
     initialStatus?: NftTaskStatus
-    tokenId?: string
   }) => {
     const existing = tasks.value.find((item) => item.checkinId === payload.checkinId)
     if (existing) return
 
     const task: NftTask = {
       checkinId: payload.checkinId,
+      backendNftId: payload.backendNftId,
       eventTitle: payload.eventTitle,
       status: payload.initialStatus || 'pending',
       startedAt: Date.now(),
-      tokenId: payload.tokenId,
     }
     tasks.value.push(task)
     latestCheckinId = task.checkinId
+    persistTasks()
 
     if (task.status === 'minted') {
       finishTask(task, 'minted')
@@ -180,9 +287,39 @@ export const useNftTasksStore = defineStore('nftTasks', () => {
     pollTask(task.checkinId)
   }
 
+  const init = () => {
+    const savedTasks = localStorage.getItem(TASK_STORAGE_KEY)
+    if (!savedTasks) return
+
+    try {
+      const restoredTasks = JSON.parse(savedTasks) as NftTask[]
+      tasks.value = restoredTasks.filter(
+        (task) =>
+          Number.isInteger(task.checkinId) &&
+          Number.isInteger(task.backendNftId) &&
+          typeof task.eventTitle === 'string' &&
+          (
+            task.status === 'pending' ||
+            task.status === 'minting' ||
+            (task.status === 'minted' && !task.tokenId)
+          ),
+      )
+      latestCheckinId =
+        tasks.value.reduce<NftTask | null>(
+          (latest, task) => (!latest || task.startedAt > latest.startedAt ? task : latest),
+          null,
+        )?.checkinId ?? null
+      tasks.value.forEach((task) => pollTask(task.checkinId))
+      persistTasks()
+    } catch {
+      localStorage.removeItem(TASK_STORAGE_KEY)
+    }
+  }
+
   return {
     notifications,
     trackCheckin,
     dismissNotification,
+    init,
   }
 })

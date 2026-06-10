@@ -14,6 +14,7 @@ export const useWalletStore = defineStore('wallet', () => {
   const chainId = ref<number | null>(null)
   const backendWalletAddress = ref<string>('')
   const backendWalletType = ref<string>('')
+  let initPromise: Promise<void> | null = null
 
   const truncatedAddress = computed(() => {
     if (!address.value) return ''
@@ -23,6 +24,27 @@ export const useWalletStore = defineStore('wallet', () => {
   const isWalletInstalled = computed(() => {
     return walletService.isWalletInstalled()
   })
+
+  const linkExternalWallet = async (connection: WalletConnection) => {
+    if (!authService.isAuthenticated() || !window.ethereum) return
+
+    const backendWallet = await apiService.getMyWallet()
+    if (
+      backendWallet.wallet_type === 'external' &&
+      backendWallet.wallet_address?.toLowerCase() === connection.address.toLowerCase()
+    ) {
+      return
+    }
+
+    const message = `Connect to VibeChain\nAddress: ${connection.address}`
+    const signature = await connection.signer.signMessage(message)
+
+    await apiService.connectExternalWallet({
+      wallet_address: connection.address,
+      signature,
+      message,
+    })
+  }
 
   const connect = async () => {
     if (isConnecting.value) return
@@ -55,19 +77,10 @@ export const useWalletStore = defineStore('wallet', () => {
 
       if (authService.isAuthenticated() && window.ethereum) {
         try {
-          const message = `Connect to VibeChain\nAddress: ${connection.address}`
-          const signature = await connection.signer.signMessage(message)
-
-          await apiService.connectExternalWallet({
-            wallet_address: connection.address,
-            signature,
-            message,
-          })
+          await linkExternalWallet(connection)
         } catch (backendError: any) {
-          // Current backend signature verification can fail (400 Invalid signature).
-          // Keep MetaMask connected locally so user can continue using wallet features.
           console.error('Ошибка привязки external wallet на backend:', backendError)
-          error.value = 'MetaMask подключен, но backend пока не подтвердил подпись (временное ограничение сервера).'
+          error.value = 'MetaMask подключен, но адрес не привязан к аккаунту. Подтвердите подпись и повторите.'
         }
       }
 
@@ -120,6 +133,12 @@ export const useWalletStore = defineStore('wallet', () => {
         setupEventListeners()
 
         if (authService.isAuthenticated()) {
+          try {
+            await linkExternalWallet(connection)
+          } catch (backendError) {
+            console.error('Ошибка восстановления привязки MetaMask:', backendError)
+            error.value = 'Подтвердите подпись MetaMask, чтобы новые NFT выпускались на этот аккаунт.'
+          }
           await syncWalletFromBackend()
         }
       }
@@ -167,15 +186,21 @@ export const useWalletStore = defineStore('wallet', () => {
     }
   }
 
-  const init = async () => {
-    const wasConnected = localStorage.getItem('walletConnected')
-    if (wasConnected === 'true') {
-      await checkConnection()
-    }
+  const init = () => {
+    if (initPromise) return initPromise
 
-    if (authService.isAuthenticated()) {
-      await syncWalletFromBackend()
-    }
+    initPromise = (async () => {
+      const wasConnected = localStorage.getItem('walletConnected')
+      if (wasConnected === 'true') {
+        await checkConnection()
+      }
+
+      if (authService.isAuthenticated()) {
+        await syncWalletFromBackend()
+      }
+    })()
+
+    return initPromise
   }
 
   return {

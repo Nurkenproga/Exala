@@ -28,14 +28,11 @@
           <p v-if="descriptionText" class="description">{{ descriptionText }}</p>
 
           <div class="actions">
-            <button class="action-btn primary" :disabled="buyLoading" @click="buyTicket">
-              {{ buyLoading ? 'Открываем...' : 'Купить билет' }}
+            <button class="action-btn primary" :disabled="!ticketPageUrl" @click="buyTicket">
+              Купить билет
             </button>
             <button class="action-btn" :disabled="nftLoading" @click="getNft">
               {{ nftLoading ? 'Чек-ин...' : 'Получить NFT' }}
-            </button>
-            <button class="action-btn" :disabled="!eventPageUrl" @click="openEventPage">
-              Перейти на страницу события
             </button>
           </div>
 
@@ -51,7 +48,6 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   apiService,
-  type BuyTicketResponse,
   type Concert,
   type EventTypeName,
   type Movie,
@@ -60,17 +56,18 @@ import {
 } from '@/services/api'
 import { authService } from '@/services/auth'
 import { useNftTasksStore } from '@/stores/nftTasks'
+import { useWalletStore } from '@/stores/wallet'
 
 type EventData = Movie | Concert | TheatreEvent | StandupEvent
 
 const route = useRoute()
 const router = useRouter()
 const nftTasksStore = useNftTasksStore()
+const walletStore = useWalletStore()
 
 const loading = ref(true)
 const error = ref<string | null>(null)
 const eventData = ref<EventData | null>(null)
-const buyLoading = ref(false)
 const nftLoading = ref(false)
 const nftStatus = ref<string>('')
 
@@ -160,6 +157,18 @@ const eventPageUrl = computed(() => {
   return (item as StandupEvent).url || ''
 })
 
+const ticketPageUrl = computed(() => {
+  const item = eventData.value
+  if (!item) return ''
+
+  if (eventType.value === 'standup') {
+    const standup = item as StandupEvent
+    return standup.card_ticket_url || standup.url || ''
+  }
+
+  return eventPageUrl.value
+})
+
 const eventTypeId = computed(() => {
   const item = eventData.value
   if (!item) {
@@ -196,42 +205,13 @@ const loadEvent = async () => {
   }
 }
 
-const extractTicketUrl = (response: BuyTicketResponse): string | null => {
-  const direct = response.buy_ticket_url || response.url || response.link
-  if (typeof direct === 'string' && direct.trim()) return direct
-
-  for (const value of Object.values(response)) {
-    if (typeof value === 'string' && /^https?:\/\//i.test(value)) {
-      return value
-    }
+const buyTicket = () => {
+  if (!ticketPageUrl.value) {
+    nftStatus.value = 'Организатор не указал ссылку на покупку билета.'
+    return
   }
 
-  return null
-}
-
-const buyTicket = async () => {
-  if (!eventData.value) return
-
-  buyLoading.value = true
-  try {
-    let response: BuyTicketResponse = {}
-    if (eventType.value === 'movie') response = await apiService.buyMovieTicket(eventId.value)
-    else if (eventType.value === 'concert') response = await apiService.buyConcertTicket(eventId.value)
-    else if (eventType.value === 'theatre') response = await apiService.buyTheatreTicket(eventId.value)
-    else response = await apiService.buyStandupTicket(eventId.value)
-
-    const ticketUrl = extractTicketUrl(response) || eventPageUrl.value
-    if (ticketUrl) {
-      window.open(ticketUrl, '_blank', 'noopener,noreferrer')
-      return
-    }
-
-    nftStatus.value = 'Ссылка на покупку не найдена в ответе сервера'
-  } catch (e) {
-    nftStatus.value = e instanceof Error ? e.message : 'Ошибка открытия покупки билета'
-  } finally {
-    buyLoading.value = false
-  }
+  window.open(ticketPageUrl.value, '_blank', 'noopener,noreferrer')
 }
 
 const getNft = async () => {
@@ -246,6 +226,21 @@ const getNft = async () => {
   nftStatus.value = 'Создаем чек-ин...'
 
   try {
+    if (!walletStore.isConnected) {
+      nftStatus.value = 'Подключаем MetaMask, чтобы NFT выпустился на ваш кошелек...'
+      await walletStore.connect()
+    }
+
+    const backendWallet = await apiService.getMyWallet()
+    if (
+      backendWallet.wallet_type !== 'external' ||
+      !backendWallet.wallet_address ||
+      backendWallet.wallet_address.toLowerCase() !== walletStore.address.toLowerCase()
+    ) {
+      throw new Error('MetaMask не привязан к аккаунту. Подтвердите подпись кошелька и повторите.')
+    }
+
+    nftStatus.value = 'Создаем чек-ин...'
     const checkin = await apiService.createCheckin({
       event_type_id: eventTypeId.value,
       external_event_id: eventId.value,
@@ -253,9 +248,9 @@ const getNft = async () => {
 
     nftTasksStore.trackCheckin({
       checkinId: checkin.checkin_id,
+      backendNftId: checkin.nft_token_id,
       eventTitle: title.value,
       initialStatus: checkin.status,
-      tokenId: String(checkin.nft_token_id),
     })
 
     nftStatus.value = checkin.status === 'minted'
@@ -266,11 +261,6 @@ const getNft = async () => {
   } finally {
     nftLoading.value = false
   }
-}
-
-const openEventPage = () => {
-  if (!eventPageUrl.value) return
-  window.open(eventPageUrl.value, '_blank', 'noopener,noreferrer')
 }
 
 const goBack = () => {

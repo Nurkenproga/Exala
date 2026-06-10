@@ -8,6 +8,7 @@ import App from './App.vue'
 import router from './router'
 import { useWalletStore } from './stores/wallet'
 import { useAuthStore } from './stores/auth'
+import { useNftTasksStore } from './stores/nftTasks'
 
 const app = createApp(App)
 const pinia = createPinia()
@@ -21,3 +22,5 @@ const walletStore = useWalletStore()
 walletStore.init()
 const authStore = useAuthStore()
 authStore.init()
+const nftTasksStore = useNftTasksStore()
+nftTasksStore.init()

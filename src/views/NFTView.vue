@@ -181,12 +181,22 @@
 
             <div class="nft-modal-actions">
               <button class="btn btn-primary" @click="setFeatured(selectedNft)">
-                {{ isFeaturedNft(selectedNft) ? 'Уже в избранном' : 'Сделать избранным' }}
+                {{ isFeaturedNft(selectedNft) ? 'Убрать из избранного' : 'Сделать избранным' }}
+              </button>
+              <button
+                v-if="selectedNft.mintStatus === 'minted' && selectedNft.hasOnchainTokenId"
+                class="btn btn-outline"
+                :disabled="metaMaskLoading"
+                @click="showSelectedNftInMetaMask"
+              >
+                {{ metaMaskLoading ? 'Ожидаем MetaMask...' : 'Показать в MetaMask' }}
               </button>
               <button class="btn btn-outline" @click="showMetadataJson = !showMetadataJson">
                 {{ showMetadataJson ? 'Скрыть метаданные JSON' : 'Показать метаданные JSON' }}
               </button>
             </div>
+
+            <p v-if="metaMaskMessage" class="metamask-message">{{ metaMaskMessage }}</p>
 
             <div v-if="showMetadataJson" class="nft-modal-json">
               <p class="modal-subtitle">Метаданные JSON</p>
@@ -200,19 +210,29 @@
     <footer class="page-footer container">
       <div class="footer-brand">
         <h3>VibeChain NFT</h3>
-        <p>Пространство NFT для коллекционеров и комьюнити.</p>
+        <p>Цифровые подтверждения посещения событий Алматы.</p>
       </div>
       <div class="footer-column">
         <h4>Разделы</h4>
-        <a href="#">Коллекции</a>
-        <a href="#">Активность</a>
-        <a href="#">Помощь</a>
+        <RouterLink to="/movies">Фильмы</RouterLink>
+        <RouterLink to="/concerts">Концерты</RouterLink>
+        <RouterLink to="/map">Карта кинотеатров</RouterLink>
       </div>
       <div class="footer-column">
         <h4>Ссылки</h4>
-        <a href="#">Документация</a>
-        <a href="#">Поддержка</a>
-        <a href="#">Контакты</a>
+        <a
+          href="https://drive.google.com/drive/folders/1obTrs0ZEtSyx0EP8mUUPl34tpIU96Iu3?usp=drive_link"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Документация
+        </a>
+        <a href="https://t.me/nurken_pyro" target="_blank" rel="noopener noreferrer">
+          Поддержка
+        </a>
+        <a href="https://t.me/nurken_pyro" target="_blank" rel="noopener noreferrer">
+          Контакты
+        </a>
       </div>
     </footer>
   </div>
@@ -223,12 +243,15 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useWalletStore } from '@/stores/wallet'
 import { apiService, type NftDetails, type NftListItem } from '@/services/api'
+import { requestMetaMaskNftImportWithRetry } from '@/services/metaMaskNft'
 import type { NFT } from '@/services/nft'
 
 type NFTViewItem = NFT & {
   backendId: number
   metadataUrl?: string | null
   txHash?: string | null
+  mintStatus: string
+  hasOnchainTokenId: boolean
 }
 
 const walletStore = useWalletStore()
@@ -241,6 +264,8 @@ const collectionsSection = ref<HTMLElement | null>(null)
 const selectedNft = ref<NFTViewItem | null>(null)
 const featuredNftKey = ref<string | null>(null)
 const showMetadataJson = ref(false)
+const metaMaskLoading = ref(false)
+const metaMaskMessage = ref<string | null>(null)
 const NFT_CONTRACT_ADDRESS =
   (import.meta.env.VITE_NFT_CONTRACT_ADDRESS as string | undefined)?.trim() ||
   '0x77951dD6E495d480a6ad61133189d651D63d0E0b'
@@ -250,14 +275,8 @@ const featuredStorageKey = computed(
 )
 
 const featuredNft = computed(() => {
-  if (featuredNftKey.value) {
-    const matched = nfts.value.find((nft) => getNftKey(nft) === featuredNftKey.value)
-    if (matched) {
-      return matched
-    }
-  }
-
-  return nfts.value[0] ?? null
+  if (!featuredNftKey.value) return null
+  return nfts.value.find((nft) => getNftKey(nft) === featuredNftKey.value) ?? null
 })
 
 const nftsWithImage = computed(() => nfts.value.filter((nft) => Boolean(getNFTImage(nft))).length)
@@ -317,6 +336,11 @@ const mapBackendNft = (item: NftListItem, details?: NftDetails): NFTViewItem => 
     timeLastUpdated: item.minted_at || new Date().toISOString(),
     txHash: details?.tx_hash || item.tx_hash || null,
     metadataUrl: details?.metadata_url || null,
+    mintStatus: details?.mint_status || item.mint_status,
+    hasOnchainTokenId:
+      details?.token_id_onchain !== null && details?.token_id_onchain !== undefined
+        ? true
+        : item.token_id_onchain !== null && item.token_id_onchain !== undefined,
   }
 }
 
@@ -432,6 +456,13 @@ const isFeaturedNft = (nft: NFTViewItem): boolean => {
 
 const setFeatured = (nft: NFTViewItem) => {
   const key = getNftKey(nft)
+
+  if (featuredNftKey.value === key) {
+    featuredNftKey.value = null
+    localStorage.removeItem(featuredStorageKey.value)
+    return
+  }
+
   featuredNftKey.value = key
   localStorage.setItem(featuredStorageKey.value, key)
 }
@@ -439,6 +470,33 @@ const setFeatured = (nft: NFTViewItem) => {
 const closeNftDetails = () => {
   selectedNft.value = null
   showMetadataJson.value = false
+  metaMaskMessage.value = null
+}
+
+const showSelectedNftInMetaMask = async () => {
+  if (!selectedNft.value) return
+
+  metaMaskLoading.value = true
+  metaMaskMessage.value = null
+  try {
+    const result = await requestMetaMaskNftImportWithRetry(
+      {
+        tokenId: selectedNft.value.tokenId,
+        imageUrl: getNFTImage(selectedNft.value),
+        contractAddress: selectedNft.value.contract.address,
+      },
+      {
+        force: true,
+        verifyOwner: true,
+        onPending: (message) => {
+          metaMaskMessage.value = message
+        },
+      },
+    )
+    metaMaskMessage.value = result.message
+  } finally {
+    metaMaskLoading.value = false
+  }
 }
 
 const formatDate = (value: string): string => {
@@ -460,6 +518,7 @@ const scrollToCollections = () => {
 
 const selectNFT = async (nft: NFTViewItem) => {
   selectedNft.value = nft
+  metaMaskMessage.value = null
   try {
     const details: NftDetails = await apiService.getNftDetails(nft.backendId)
 
@@ -502,6 +561,9 @@ const selectNFT = async (nft: NFTViewItem) => {
       description: mergedDescription,
       txHash: details.tx_hash || null,
       metadataUrl: details.metadata_url || null,
+      mintStatus: details.mint_status,
+      hasOnchainTokenId:
+        details.token_id_onchain !== null && details.token_id_onchain !== undefined,
       contract: {
         ...nft.contract,
         address: details.contract_address || nft.contract.address || NFT_CONTRACT_ADDRESS,
@@ -719,16 +781,16 @@ watch(featuredStorageKey, (key) => {
   aspect-ratio: 1 / 1;
   border-radius: 26px;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  background: linear-gradient(150deg, #151d3c, #0a0e20);
-  box-shadow: 0 24px 48px rgba(1, 6, 22, 0.45);
+  border: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .hero-art-image {
   width: 100%;
   height: 100%;
   object-fit: contain;
-  background: #07090f;
+  background: transparent;
   position: relative;
   z-index: 1;
 }
@@ -1098,6 +1160,16 @@ watch(featuredStorageKey, (key) => {
   flex-wrap: wrap;
   gap: 0.55rem;
   margin-top: 0.35rem;
+}
+
+.metamask-message {
+  margin-top: 0.25rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 10px;
+  background: rgba(79, 157, 255, 0.1);
+  border: 1px solid rgba(79, 157, 255, 0.22);
+  color: #c8d8ff !important;
+  font-size: 0.82rem !important;
 }
 
 .nft-modal-json {
